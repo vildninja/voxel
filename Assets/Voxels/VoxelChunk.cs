@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using System.Collections;
+using System.IO;
 
 public class VoxelChunk : MonoBehaviour
 {
@@ -85,4 +86,33 @@ public class VoxelChunk : MonoBehaviour
     //        }
     //    }
     //}
+
+    public void SaveChunk(BinaryWriter writer)
+    {
+        for (int x = 0; x < data.GetLength(0); x++)
+        {
+            for (int y = 0; y < data.GetLength(1); y++)
+            {
+                for (int z = 0; z < data.GetLength(2); z++)
+                {
+                    writer.Write(data[x, y, z]);
+                }
+            }
+        }
+    }
+
+    public void LoadChunk(BinaryReader reader)
+    {
+        for (int x = 0; x < data.GetLength(0); x++)
+        {
+            for (int y = 0; y < data.GetLength(1); y++)
+            {
+                for (int z = 0; z < data.GetLength(2); z++)
+                {
+                    data[x, y, z] = (byte)reader.ReadByte();
+                }
+            }
+        }
+        UpdateChunk();
+    }
 }

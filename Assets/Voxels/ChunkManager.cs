@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 
 public class ChunkManager : MonoBehaviour {
 
@@ -53,14 +54,7 @@ public class ChunkManager : MonoBehaviour {
             var v = new Vector3(offset[i, 0] + x, offset[i, 1] + y, offset[i, 2] + z);
             if (!chunks.ContainsKey(v))
             {
-                var go = new GameObject("Chunk" + v);
-                var chunk = go.AddComponent<VoxelChunk>();
-                chunk.Initialize(size, 1, v * (size - 1));
-
-                var rend = go.AddComponent<MeshRenderer>();
-                rend.sharedMaterial = material;
-
-                go.transform.SetParent(transform, false);
+                var chunk = CreateChunk(v);
 
                 chunks.Add(v, chunk);
             }
@@ -72,6 +66,20 @@ public class ChunkManager : MonoBehaviour {
         }
     }
 
+    private VoxelChunk CreateChunk(Vector3 intPos)
+    {
+        var go = new GameObject("Chunk" + intPos);
+        var chunk = go.AddComponent<VoxelChunk>();
+        chunk.Initialize(size, 1, intPos * (size - 1));
+
+        var rend = go.AddComponent<MeshRenderer>();
+        rend.sharedMaterial = material;
+
+        go.transform.SetParent(transform, false);
+
+        return chunk;
+    }
+
     public void Drag(Vector3 position, Vector3 move, Quaternion rotate)
     {
         transform.Translate(move, Space.World);
@@ -79,5 +87,62 @@ public class ChunkManager : MonoBehaviour {
         float angle;
         rotate.ToAngleAxis(out angle, out axis);
         transform.RotateAround(position, axis, angle);
+    }
+
+    public void SaveChunks(string path)
+    {
+        var stream = File.OpenWrite(path);
+        var writer = new BinaryWriter(stream);
+
+        writer.Write(size);
+
+        foreach (var chunk in chunks)
+        {
+            writer.Write(Mathf.RoundToInt(chunk.Key.x));
+            writer.Write(Mathf.RoundToInt(chunk.Key.y));
+            writer.Write(Mathf.RoundToInt(chunk.Key.z));
+            chunk.Value.SaveChunk(writer);
+        }
+
+        writer.Close();
+        Debug.Log(chunks.Count + " chunks written to " + path);
+    }
+
+    public void LoadChunks(string path)
+    {
+        foreach (var chunk in chunks)
+        {
+            Destroy(chunk.Value.gameObject);
+        }
+        chunks.Clear();
+
+        if (!File.Exists(path))
+        {
+            return;
+        }
+
+        var stream = File.OpenRead(path);
+        var reader = new BinaryReader(stream);
+
+        size = reader.ReadInt32();
+
+        while (stream.Position < stream.Length)
+        {
+            var v = new Vector3(reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32());
+            var chunk = CreateChunk(v);
+            chunk.LoadChunk(reader);
+
+            if (chunks.ContainsKey(v))
+            {
+                Debug.LogError(v + " duplicated in data");
+            }
+            else
+            {
+                chunks.Add(v, chunk);
+            }
+        }
+        
+        reader.Close();
+        Debug.Log(chunks.Count + " chunks loaded from " + path);
     }
 }
