@@ -17,6 +17,9 @@ public class HydraPainter : MonoBehaviour
     private Vector3 lastPosition;
     private Quaternion lastRotation;
 
+    private Vector2 lastThumb;
+    private Material material;
+
     private bool started = false;
 
 	// Use this for initialization
@@ -27,7 +30,10 @@ public class HydraPainter : MonoBehaviour
             ChunkManager.Instance.LoadChunks(scene + ".vox");
         }
 
-	    while (SixenseInput.GetController(hand) == null)
+        material = GetComponentInChildren<Renderer>().sharedMaterial;
+        material.color = MarchingCubes.Builder.colorMap[color];
+
+        while (SixenseInput.GetController(hand) == null)
 	    {
 	        yield return null;
 	    }
@@ -103,6 +109,38 @@ public class HydraPainter : MonoBehaviour
             {
                 ChunkManager.Instance.LoadChunks(scene + ".vox");
             }
+        }
+
+        var joystick = new Vector2(controller.JoystickX, controller.JoystickY);
+        if (joystick.sqrMagnitude > 0.4f)
+        {
+            if (lastThumb.sqrMagnitude < 0.5f)
+            {
+                lastThumb = joystick.normalized;
+            }
+
+            if (Mathf.Abs(Vector3.Cross(joystick.normalized, lastThumb).z) > 0.5f)
+            {
+                int c = color + Mathf.RoundToInt(Mathf.Sign(Vector3.Cross(joystick.normalized, lastThumb).z));
+                lastThumb = joystick.normalized;
+
+                if (c < 0)
+                {
+                    c = (byte) (MarchingCubes.Builder.colorMap.Length - 1);
+                }
+                if (c >= MarchingCubes.Builder.colorMap.Length)
+                {
+                    c = 0;
+                }
+
+                color = (byte)c;
+
+                material.color = MarchingCubes.Builder.colorMap[color];
+            }
+        }
+        else
+        {
+            lastThumb = Vector2.zero;
         }
 	}
 }

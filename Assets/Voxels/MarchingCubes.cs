@@ -22,12 +22,28 @@ public class MarchingCubes
     readonly List<Vector3> vertices = new List<Vector3>();
     readonly List<Vector3> normals = new List<Vector3>();
     readonly List<int> triangles = new List<int>();
+    readonly List<Color32> colors = new List<Color32>();
+
+    public readonly Color32[] colorMap =
+    {
+        new Color32(0, 0, 0, 100), // this is air
+        new Color32(255, 255, 255, 255),
+        new Color32(127, 127, 127, 255),
+        new Color32(0, 0, 0, 255),
+        new Color32(255, 0, 0, 255),
+        new Color32(0, 255, 0, 255),
+        new Color32(0, 0, 255, 255),
+        new Color32(255, 255, 0, 255),
+        new Color32(255, 0, 255, 255),
+        new Color32(0, 255, 255, 255),
+    };
 
     public void ProcessChunk(byte[,,] data, float scale, Mesh mesh)
     {
         vertices.Clear();
         normals.Clear();
         triangles.Clear();
+        colors.Clear();
 
         for (int x = 0; x < data.GetLength(0) - 1; x++)
         {
@@ -37,26 +53,36 @@ public class MarchingCubes
                 {
                     int configuration = 0;
                     byte target = 0;
+                    //for (int i = 0; i < 8; i++)
+                    //{
+                    //    byte val = data[x + vertexOffset[i, 0], y + vertexOffset[i, 1], z + vertexOffset[i, 2]];
+                    //    if (val > target)
+                    //    {
+                    //        target = val;
+                    //    }
+                    //}
+
+                    int blend = 1;
+                    var color = new Color32();
+
                     for (int i = 0; i < 8; i++)
                     {
                         byte val = data[x + vertexOffset[i, 0], y + vertexOffset[i, 1], z + vertexOffset[i, 2]];
-                        if (val > target)
-                        {
-                            target = val;
-                        }
-                    }
-                    for (int i = 0; i < 8; i++)
-                    {
-                        byte val = data[x + vertexOffset[i, 0], y + vertexOffset[i, 1], z + vertexOffset[i, 2]];
-                        if (val < target)
+                        if (val == target)
                         {
                             configuration |= 1 << i;
+                        }
+
+                        if (val > 0)
+                        {
+                            color = Color32.Lerp(color, colorMap[val], 1f / blend);
+                            blend++;
                         }
                     }
 
                     if (configuration > 0 && configuration < 255)
                     {
-                        ProcessCube((byte)configuration, new Vector3(x, y, z) * scale, scale);
+                        ProcessCube((byte)configuration, new Vector3(x, y, z) * scale, scale, color);
                     }
                 }
             }
@@ -65,10 +91,11 @@ public class MarchingCubes
         mesh.Clear();
         mesh.vertices = vertices.ToArray();
         mesh.normals = normals.ToArray();
+        mesh.colors32 = colors.ToArray();
         mesh.triangles = triangles.ToArray();
     }
 
-    void ProcessCube(byte cube, Vector3 min, float scale)
+    void ProcessCube(byte cube, Vector3 min, float scale, Color32 color)
     {
         for (int i = 0; i < 15; i += 3)
         {
@@ -91,6 +118,10 @@ public class MarchingCubes
             normals.Add(normal);
             normals.Add(normal);
             normals.Add(normal);
+
+            colors.Add(color);
+            colors.Add(color);
+            colors.Add(color);
 
             triangles.Add(triangles.Count);
             triangles.Add(triangles.Count);
