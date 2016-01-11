@@ -5,6 +5,7 @@ using System.Collections.Generic;
 public class MarchingCubes
 {
     private static MarchingCubes builder = null;
+    private const bool SMOOTH = true;
 
     public static MarchingCubes Builder
     {
@@ -19,10 +20,82 @@ public class MarchingCubes
         }
     }
 
+    public interface ByteData
+    {
+        int Length { get; }
+        byte this [int x, int y, int z] { get; }
+    }
+
     readonly List<Vector3> vertices = new List<Vector3>();
     readonly List<Vector3> normals = new List<Vector3>();
     readonly List<int> triangles = new List<int>();
     readonly List<Color32> colors = new List<Color32>();
+    readonly List<int> counters = new List<int>();
+    readonly List<NormalCalculater> compositeNormals = new List<NormalCalculater>();
+
+    readonly Vector3[] current = new Vector3[3];
+
+    private struct NormalCalculater
+    {
+        private readonly Vector3[] list;
+        private int count;
+
+        public Vector3 Normal
+        {
+            get
+            {
+                if (count == 0)
+                {
+                    return Vector3.zero;
+                }
+                if (count == 1)
+                {
+                    return list[0];
+                }
+
+                var result = list[0];
+                for (int i = 1; i < count; i++)
+                {
+                    result += list[i];
+                }
+
+                return result.normalized;
+            }
+        }
+
+        public NormalCalculater(Vector3 normal)
+        {
+            list = new Vector3[12];
+            count = 0;
+            Set(normal);
+        }
+
+        public void Set(Vector3 normal)
+        {
+            count = 1;
+            list[0] = normal;
+        }
+
+        public void Add(Vector3 normal)
+        {
+            for (int i = 0; i < count; i++)
+            {
+                if (Near(list[i], normal))
+                {
+                    return;
+                }
+            }
+
+            list[count++] = normal;
+        }
+
+        private bool Near(Vector3 a, Vector3 b)
+        {
+            return Mathf.Abs(a.x - b.x) < 0.01f &&
+                    Mathf.Abs(a.y - b.y) < 0.01f &&
+                    Mathf.Abs(a.z - b.z) < 0.01f;
+        }
+    }
 
     public readonly Color32[] colorMap =
     {
@@ -38,18 +111,19 @@ public class MarchingCubes
         new Color32(0, 255, 255, 255),
     };
 
-    public void ProcessChunk(byte[,,] data, float scale, Mesh mesh)
+    public void ProcessChunk(ByteData data, float scale, Mesh mesh)
     {
         vertices.Clear();
         normals.Clear();
         triangles.Clear();
         colors.Clear();
+        counters.Clear();
 
-        for (int x = 0; x < data.GetLength(0) - 1; x++)
+        for (int x = 0; x < data.Length - 1; x++)
         {
-            for (int y = 0; y < data.GetLength(1) - 1; y++)
+            for (int y = 0; y < data.Length - 1; y++)
             {
-                for (int z = 0; z < data.GetLength(2) - 1; z++)
+                for (int z = 0; z < data.Length - 1; z++)
                 {
                     int configuration = 0;
                     byte target = 0;
@@ -90,6 +164,13 @@ public class MarchingCubes
 
         mesh.Clear();
         mesh.vertices = vertices.ToArray();
+        if (SMOOTH)
+        {
+            for (int i = 0; i < vertices.Count; i++)
+            {
+                normals.Add(compositeNormals[i].Normal);
+            }
+        }
         mesh.normals = normals.ToArray();
         mesh.colors32 = colors.ToArray();
         mesh.triangles = triangles.ToArray();
@@ -104,29 +185,68 @@ public class MarchingCubes
                 break;
             }
 
-            var a = verticeTable[triangleTable[cube, i]] * scale + min;
-            var b = verticeTable[triangleTable[cube, i + 1]] * scale + min;
-            var c = verticeTable[triangleTable[cube, i + 2]] * scale + min;
-
-            vertices.Add(a);
-            vertices.Add(b);
-            vertices.Add(c);
-
-            var normal = Vector3.Cross(b - a, c - a);
+            current[0] = verticeTable[triangleTable[cube, i]] * scale + min;
+            current[1] = verticeTable[triangleTable[cube, i + 1]] * scale + min;
+            current[2] = verticeTable[triangleTable[cube, i + 2]] * scale + min;
+            
+            var normal = Vector3.Cross(current[1] - current[0], current[2] - current[0]);
             normal.Normalize();
 
-            normals.Add(normal);
-            normals.Add(normal);
-            normals.Add(normal);
+            for (int j = 0; j < 3; j++)
+            {
+                int index = vertices.Count;
+                if (SMOOTH)
+                {
+                    // there is a higher chance that vertices close to each other
+                    // are added shortly after each other. So I iterate backwards.
+                    for (int k = vertices.Count - 1; k >= 0; k--)
+                    {
+                        if (Near(vertices[k], current[j]))
+                        {
+                            index = k;
 
-            colors.Add(color);
-            colors.Add(color);
-            colors.Add(color);
+                            // adjust current values
+                            //colors[index] = Color32.Lerp(colors[index], )
 
-            triangles.Add(triangles.Count);
-            triangles.Add(triangles.Count);
-            triangles.Add(triangles.Count);
+                            compositeNormals[index].Add(normal);
+
+                            break;
+                        }
+                    }
+                }
+
+                if (index == vertices.Count)
+                {
+                    vertices.Add(current[j]);
+                    colors.Add(color);
+                    if (SMOOTH)
+                    {
+                        counters.Add(1);
+                        if (compositeNormals.Count > index)
+                        {
+                            compositeNormals[index].Set(normal);
+                        }
+                        else
+                        {
+                            compositeNormals.Add(new NormalCalculater(normal));
+                        }
+                    }
+                    else
+                    {
+                        normals.Add(normal);
+                    }
+                }
+
+                triangles.Add(index);
+            }
         }
+    }
+
+    private bool Near(Vector3 a, Vector3 b)
+    {
+        return Mathf.Abs(a.x - b.x) < 0.01f &&
+                Mathf.Abs(a.y - b.y) < 0.01f &&
+                Mathf.Abs(a.z - b.z) < 0.01f;
     }
 
     readonly int[,] vertexOffset = 

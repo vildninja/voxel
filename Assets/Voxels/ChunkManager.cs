@@ -23,8 +23,7 @@ public class ChunkManager : MonoBehaviour {
     public int size = 16;
     public Material material;
 
-    private readonly Dictionary<Vector3, VoxelChunk> chunks =new Dictionary<Vector3, VoxelChunk>();
-    //private readonly HashSet<Vector3> populated = new HashSet<Vector3>();
+    private readonly Dictionary<Vint3, VoxelChunk> chunks = new Dictionary<Vint3, VoxelChunk>();
 
     private int[,] offset =
     {
@@ -51,7 +50,7 @@ public class ChunkManager : MonoBehaviour {
 
         for (int i = 0; i < offset.GetLength(0); i++)
         {
-            var v = new Vector3(offset[i, 0] + x, offset[i, 1] + y, offset[i, 2] + z);
+            var v = new Vint3(offset[i, 0] + x, offset[i, 1] + y, offset[i, 2] + z);
             if (!chunks.ContainsKey(v))
             {
                 var chunk = CreateChunk(v);
@@ -66,11 +65,11 @@ public class ChunkManager : MonoBehaviour {
         }
     }
 
-    private VoxelChunk CreateChunk(Vector3 intPos)
+    private VoxelChunk CreateChunk(Vint3 intPos)
     {
         var go = new GameObject("Chunk" + intPos);
         var chunk = go.AddComponent<VoxelChunk>();
-        chunk.Initialize(size, 1, intPos * (size - 1));
+        chunk.Initialize(size, 1, intPos.Vector * (size - 1f), intPos);
 
         var rend = go.AddComponent<MeshRenderer>();
         rend.sharedMaterial = material;
@@ -128,7 +127,7 @@ public class ChunkManager : MonoBehaviour {
 
         while (stream.Position < stream.Length)
         {
-            var v = new Vector3(reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32());
+            var v = new Vint3(reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32());
             var chunk = CreateChunk(v);
             chunk.LoadChunk(reader);
 
