@@ -22,7 +22,7 @@ public class VoxelChunk : MonoBehaviour
         var filter = gameObject.AddComponent<MeshFilter>();
         filter.mesh = mesh;
 
-        transform.position = position;
+        transform.localPosition = position;
         bounds = new Bounds(position + new Vector3(size, size, size) * 0.5f, new Vector3(size, size, size));
 
         //Draw(transform.position + new Vector3(7, 7, 7), 5, 1);
@@ -51,7 +51,7 @@ public class VoxelChunk : MonoBehaviour
             {
                 for (int z = 0; z < data.GetLength(2); z++)
                 {
-                    if (Vector3.Distance(position, transform.position + new Vector3(x, y, z)*scale) < radius)
+                    if (Vector3.Distance(position, transform.localPosition + new Vector3(x, y, z)*scale) < radius)
                     {
                         data[x, y, z] = color;
                     }
@@ -66,23 +66,23 @@ public class VoxelChunk : MonoBehaviour
         MarchingCubes.Builder.ProcessChunk(data, scale, mesh);
     }
 
-    void OnDrawGizmos()
-    {
-        if (data == null)
-        {
-            return;
-        }
+    //void OnDrawGizmos()
+    //{
+    //    if (data == null)
+    //    {
+    //        return;
+    //    }
 
-        for (int x = 0; x < data.GetLength(0); x++)
-        {
-            for (int y = 0; y < data.GetLength(1); y++)
-            {
-                for (int z = 0; z < data.GetLength(2); z++)
-                {
-                    Gizmos.color = data[x, y, z] == 0 ? Color.blue : Color.green;
-                    Gizmos.DrawSphere(transform.position + new Vector3(x, y, z), 0.05f);
-                }
-            }
-        }
-    }
+    //    for (int x = 0; x < data.GetLength(0); x++)
+    //    {
+    //        for (int y = 0; y < data.GetLength(1); y++)
+    //        {
+    //            for (int z = 0; z < data.GetLength(2); z++)
+    //            {
+    //                Gizmos.color = data[x, y, z] == 0 ? Color.blue : Color.green;
+    //                Gizmos.DrawSphere(transform.position + new Vector3(x, y, z), 0.05f);
+    //            }
+    //        }
+    //    }
+    //}
 }

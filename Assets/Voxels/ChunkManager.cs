@@ -40,6 +40,8 @@ public class ChunkManager : MonoBehaviour {
  
     public void Draw(Vector3 position, float radius, byte color)
     {
+        position = transform.InverseTransformPoint(position);
+
         int x = Mathf.FloorToInt(position.x/size);
         int y = Mathf.FloorToInt(position.y/size);
         int z = Mathf.FloorToInt(position.z/size);
@@ -58,7 +60,7 @@ public class ChunkManager : MonoBehaviour {
                 var rend = go.AddComponent<MeshRenderer>();
                 rend.sharedMaterial = material;
 
-                go.transform.SetParent(transform);
+                go.transform.SetParent(transform, false);
 
                 chunks.Add(v, chunk);
             }
@@ -68,5 +70,14 @@ public class ChunkManager : MonoBehaviour {
                 chunks[v].Draw(position, radius, color);
             }
         }
+    }
+
+    public void Drag(Vector3 position, Vector3 move, Quaternion rotate)
+    {
+        transform.Translate(move, Space.World);
+        Vector3 axis;
+        float angle;
+        rotate.ToAngleAxis(out angle, out axis);
+        transform.RotateAround(position, axis, angle);
     }
 }

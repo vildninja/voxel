@@ -11,6 +11,9 @@ public class HydraPainter : MonoBehaviour
     public byte color = 1;
     public float radius = 2;
 
+    private Vector3 lastPosition;
+    private Quaternion lastRotation;
+
 	// Use this for initialization
 	IEnumerator Start ()
     {
@@ -36,5 +39,15 @@ public class HydraPainter : MonoBehaviour
 	    {
 	        ChunkManager.Instance.Draw(controller.Position * scale, radius * controller.Trigger, color);
 	    }
+
+        if (controller.GetButton(SixenseButtons.BUMPER))
+        {
+            ChunkManager.Instance.Drag(controller.Position * scale,
+                (controller.Position - lastPosition) * scale,
+                controller.Rotation * Quaternion.Inverse(lastRotation));
+        }
+
+        lastPosition = controller.Position;
+        lastRotation = controller.Rotation;
 	}
 }
