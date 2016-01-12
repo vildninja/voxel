@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
+using System;
 
-public struct Vint3
+public struct Vint3 : IEquatable<Vint3>
 {
     public static readonly Vint3 Zero = new Vint3(0, 0, 0);
 

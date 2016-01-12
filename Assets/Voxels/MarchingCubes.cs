@@ -163,7 +163,7 @@ public class MarchingCubes
         }
 
         mesh.Clear();
-        mesh.vertices = vertices.ToArray();
+        mesh.SetVertices(vertices);
         if (SMOOTH)
         {
             for (int i = 0; i < vertices.Count; i++)
@@ -171,9 +171,9 @@ public class MarchingCubes
                 normals.Add(compositeNormals[i].Normal);
             }
         }
-        mesh.normals = normals.ToArray();
-        mesh.colors32 = colors.ToArray();
-        mesh.triangles = triangles.ToArray();
+        mesh.SetNormals(normals);
+        mesh.SetColors(colors);
+        mesh.SetTriangles(triangles, 0);
     }
 
     void ProcessCube(byte cube, Vector3 min, float scale, Color32 color, bool seemsOnly)
