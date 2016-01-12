@@ -35,6 +35,15 @@ public class MarchingCubes
 
     readonly Vector3[] current = new Vector3[3];
 
+    private struct IntInt
+    {
+        public int index;
+        public int version;
+    }
+
+    int lookupVersion = 0;
+    private IntInt[,,] lookup = null;
+
     private struct NormalCalculater
     {
         private readonly Vector3[] list;
@@ -113,6 +122,12 @@ public class MarchingCubes
 
     public void ProcessChunk(ByteData data, float scale, Mesh mesh)
     {
+        if (lookup == null || lookup.GetLength(0) < data.Length * 2 + 3)
+        {
+            lookup = new IntInt[data.Length * 2 + 3, data.Length * 2 + 3, data.Length * 2 + 3];
+        }
+        lookupVersion++;
+
         vertices.Clear();
         normals.Clear();
         triangles.Clear();
@@ -197,22 +212,39 @@ public class MarchingCubes
                 int index = vertices.Count;
                 if (SMOOTH)
                 {
-                    // there is a higher chance that vertices close to each other
-                    // are added shortly after each other. So I iterate backwards.
-                    for (int k = vertices.Count - 1; k >= 0; k--)
+                    var ii = lookup[Mathf.RoundToInt(current[j].x * 2) + 2,
+                        Mathf.RoundToInt(current[j].y * 2) + 2,
+                        Mathf.RoundToInt(current[j].z * 2) + 2];
+
+                    if (ii.version == lookupVersion)
                     {
-                        if (Near(vertices[k], current[j]))
-                        {
-                            index = k;
-
-                            // adjust current values
-                            //colors[index] = Color32.Lerp(colors[index], )
-
-                            compositeNormals[index].Add(normal);
-
-                            break;
-                        }
+                        index = ii.index;
+                        compositeNormals[index].Add(normal);
                     }
+                    else
+                    {
+                        ii.index = index;
+                        ii.version = lookupVersion;
+                        lookup[Mathf.RoundToInt(current[j].x * 2) + 2,
+                            Mathf.RoundToInt(current[j].y * 2) + 2,
+                            Mathf.RoundToInt(current[j].z * 2) + 2] = ii;
+                    }
+                    //// there is a higher chance that vertices close to each other
+                    //// are added shortly after each other. So I iterate backwards.
+                    //for (int k = vertices.Count - 1; k >= 0; k--)
+                    //{
+                    //    if (Near(vertices[k], current[j]))
+                    //    {
+                    //        index = k;
+
+                    //        // adjust current values
+                    //        //colors[index] = Color32.Lerp(colors[index], )
+
+                    //        compositeNormals[index].Add(normal);
+
+                    //        break;
+                    //    }
+                    //}
                 }
 
                 if (index == vertices.Count)
@@ -243,6 +275,16 @@ public class MarchingCubes
                 }
             }
         }
+    }
+
+    private int SoftCeil(float x)
+    {
+        int round = Mathf.RoundToInt(x);
+        if (Mathf.Abs(round - x) < 0.1f)
+        {
+            return round;
+        }
+        return Mathf.CeilToInt(x);
     }
 
     private bool Near(Vector3 a, Vector3 b)
