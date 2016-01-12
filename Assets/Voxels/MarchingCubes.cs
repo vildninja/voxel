@@ -262,13 +262,8 @@ public class MarchingCubes
         new Vector3(0.0f, 0.5f, 0.0f),new Vector3(0.0f, 0.5f, 1.0f),new Vector3(1.0f, 0.5f, 1.0f),new Vector3(1.0f, 0.5f, 0.0f),
     };
 
-    //  For each of the possible vertex states listed in cubeEdgeFlags there is a specific triangulation
-    //  of the edge intersection points.  triangleConnectionTable lists all of them in the form of
-    //  0-5 edge triples with the list terminated by the invalid value -1.
-    //  For example: triangleConnectionTable[3] list the 2 triangles formed when corner[0] 
-    //  and corner[1] are inside of the surface, but the rest of the cube is not.
-    //  triangleConnectionTable[256][16]
-
+    //  Triangle table stolen from:
+    // http://scrawkblog.com/2013/04/01/marching-cubes-plugin-for-unity/
     readonly int[,] triangleTable = 
     {
         {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
