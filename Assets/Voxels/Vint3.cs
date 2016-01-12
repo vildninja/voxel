@@ -2,6 +2,8 @@
 
 public struct Vint3
 {
+    public static readonly Vint3 Zero = new Vint3(0, 0, 0);
+
     public int x;
     public int y;
     public int z;
@@ -42,13 +44,13 @@ public struct Vint3
 
     public static Vint3 operator *(Vint3 a, float s)
     {
-        return new Vint3(Mathf.CeilToInt(a.x * s), Mathf.CeilToInt(a.y * s), Mathf.CeilToInt(a.z * s));
+        return new Vint3(Mathf.FloorToInt(a.x * s), Mathf.FloorToInt(a.y * s), Mathf.FloorToInt(a.z * s));
     }
 
-    // to behave near the x/y/z planes, I manually ceils down (c# default is to go towards zero)
+    // to behave near the x/y/z planes, I manually floor down (c# default is to go towards zero)
     public static Vint3 operator /(Vint3 a, float s)
     {
-        return new Vint3(Mathf.CeilToInt(a.x / s), Mathf.CeilToInt(a.y / s), Mathf.CeilToInt(a.z / s));
+        return new Vint3(Mathf.FloorToInt(a.x / s), Mathf.FloorToInt(a.y / s), Mathf.FloorToInt(a.z / s));
     }
 
     public Vector3 Vector

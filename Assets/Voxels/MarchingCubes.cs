@@ -119,11 +119,11 @@ public class MarchingCubes
         colors.Clear();
         counters.Clear();
 
-        for (int x = 0; x < data.Length - 1; x++)
+        for (int x = -1; x < data.Length; x++)
         {
-            for (int y = 0; y < data.Length - 1; y++)
+            for (int y = -1; y < data.Length; y++)
             {
-                for (int z = 0; z < data.Length - 1; z++)
+                for (int z = -1; z < data.Length; z++)
                 {
                     int configuration = 0;
                     byte target = 0;
@@ -156,7 +156,7 @@ public class MarchingCubes
 
                     if (configuration > 0 && configuration < 255)
                     {
-                        ProcessCube((byte)configuration, new Vector3(x, y, z) * scale, scale, color);
+                        ProcessCube((byte)configuration, new Vector3(x, y, z) * scale, scale, color, x < 0 || y < 0 || z < 0);
                     }
                 }
             }
@@ -176,7 +176,7 @@ public class MarchingCubes
         mesh.triangles = triangles.ToArray();
     }
 
-    void ProcessCube(byte cube, Vector3 min, float scale, Color32 color)
+    void ProcessCube(byte cube, Vector3 min, float scale, Color32 color, bool seemsOnly)
     {
         for (int i = 0; i < 15; i += 3)
         {
@@ -237,7 +237,10 @@ public class MarchingCubes
                     }
                 }
 
-                triangles.Add(index);
+                if (!seemsOnly)
+                {
+                    triangles.Add(index);
+                }
             }
         }
     }

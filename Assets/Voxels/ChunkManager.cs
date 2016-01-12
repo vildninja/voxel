@@ -24,6 +24,7 @@ public class ChunkManager : MonoBehaviour {
     public Material material;
 
     private readonly Dictionary<Vint3, VoxelChunk> chunks = new Dictionary<Vint3, VoxelChunk>();
+    private readonly List<VoxelChunk> justPainted = new List<VoxelChunk>();
 
     private int[,] offset =
     {
@@ -37,6 +38,17 @@ public class ChunkManager : MonoBehaviour {
         {1, 0, -1}, {1, 0, 0}, {1, 0, 1},
         {1, 1, -1}, {1, 1, 0}, {1, 1, 1}
     };
+
+    public byte GetSingleVoxel(Vint3 pos)
+    {
+        var logic = pos / size;
+        VoxelChunk chunk;
+        if (chunks.TryGetValue(logic, out chunk))
+        {
+            return chunk[pos - logic * size];
+        }
+        return 0;
+    }
  
     public void Draw(Vector3 position, float radius, byte color)
     {
@@ -61,15 +73,22 @@ public class ChunkManager : MonoBehaviour {
             if (chunks[v].bounds.Intersects(bounds))
             {
                 chunks[v].Draw(position, radius, color);
+                justPainted.Add(chunks[v]);
             }
         }
+
+        for (int i = 0; i < justPainted.Count; i++)
+        {
+            justPainted[i].UpdateChunk();
+        }
+        justPainted.Clear();
     }
 
     private VoxelChunk CreateChunk(Vint3 intPos)
     {
         var go = new GameObject("Chunk" + intPos);
         var chunk = go.AddComponent<VoxelChunk>();
-        chunk.Initialize(size, 1, intPos.Vector * (size - 1f), intPos);
+        chunk.Initialize(size, 1, intPos.Vector * size, intPos);
 
         var rend = go.AddComponent<MeshRenderer>();
         rend.sharedMaterial = material;
@@ -142,6 +161,12 @@ public class ChunkManager : MonoBehaviour {
         }
         
         reader.Close();
+
+        foreach (var chunk in chunks)
+        {
+            chunk.Value.UpdateChunk();
+        }
+
         Debug.Log(chunks.Count + " chunks loaded from " + path);
     }
 }

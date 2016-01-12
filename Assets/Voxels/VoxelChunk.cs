@@ -28,17 +28,24 @@ public class VoxelChunk : MonoBehaviour, MarchingCubes.ByteData
     {
         get
         {
-            return data[x, y, z];
+            return this[new Vint3(x, y, z)];
+        }
+    }
 
-            //var pos = new Vint3(x, y, z) / size;
-            //if (pos == logicPos)
-            //{
-            //    return data[x, y, z];
-            //}
-            //else
-            //{
-            //    return 0;
-            //}
+    public byte this[Vint3 pos]
+    {
+        get
+        {
+            //return data[x, y, z];
+            var logic = pos / size;
+            if (logic == Vint3.Zero)
+            {
+                return data[pos.x, pos.y, pos.z];
+            }
+            else
+            {
+                return ChunkManager.Instance.GetSingleVoxel(logicPos * size + pos);
+            }
         }
     }
 
@@ -89,7 +96,6 @@ public class VoxelChunk : MonoBehaviour, MarchingCubes.ByteData
                 }
             }
         }
-        UpdateChunk();
     }
 
     public void UpdateChunk()
@@ -143,6 +149,5 @@ public class VoxelChunk : MonoBehaviour, MarchingCubes.ByteData
                 }
             }
         }
-        UpdateChunk();
     }
 }
