@@ -143,27 +143,65 @@ public class VoxelChunk : MonoBehaviour, MarchingCubes.ByteData
 
     public void SaveChunk(BinaryWriter writer)
     {
+        byte current = 0;
+        byte count = 0;
         for (int x = 0; x < data.GetLength(0); x++)
         {
             for (int y = 0; y < data.GetLength(1); y++)
             {
                 for (int z = 0; z < data.GetLength(2); z++)
                 {
-                    writer.Write(data[x, y, z]);
+                    if (current == data[x, y, z])
+                    {
+                        if (count < 255)
+                        {
+                            count++;
+                        }
+                        else
+                        {
+                            writer.Write(count);
+                            writer.Write(current);
+                            count = 1;
+                        }
+                    }
+                    else
+                    {
+                        if (count > 0)
+                        {
+                            writer.Write(count);
+                            writer.Write(current);
+                        }
+                        current = data[x, y, z];
+                        count = 1;
+                    }
                 }
             }
         }
+
+        writer.Write(count);
+        writer.Write(current);
     }
 
     public void LoadChunk(BinaryReader reader)
     {
+        byte current = 0;
+        byte count = 0;
+
         for (int x = 0; x < data.GetLength(0); x++)
         {
             for (int y = 0; y < data.GetLength(1); y++)
             {
                 for (int z = 0; z < data.GetLength(2); z++)
                 {
-                    data[x, y, z] = (byte)reader.ReadByte();
+                    if (count == 0)
+                    {
+                        count = reader.ReadByte();
+                        current = reader.ReadByte();
+                    }
+                    data[x, y, z] = current;
+                    count--;
+
+                    //data[x, y, z] = reader.ReadByte();
                 }
             }
         }

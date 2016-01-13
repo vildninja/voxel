@@ -27,6 +27,7 @@ public class ChunkManager : MonoBehaviour {
 
     private readonly Dictionary<Vint3, VoxelChunk> chunks = new Dictionary<Vint3, VoxelChunk>();
     private readonly List<VoxelChunk> justPainted = new List<VoxelChunk>();
+    private readonly HashSet<Vint3> neighbours = new HashSet<Vint3>();
 
     private int[,] offset =
     {
@@ -112,13 +113,18 @@ public class ChunkManager : MonoBehaviour {
     public void SaveChunks(string path)
     {
 #if !UNITY_WEBGL
-        var stream = File.OpenWrite(path);
+        var stream = File.Create(path);
         var writer = new BinaryWriter(stream);
 
         writer.Write(size);
 
         foreach (var chunk in chunks)
         {
+            if (chunk.Value.IsEmpty())
+            {
+                continue;
+            }
+
             writer.Write(Mathf.RoundToInt(chunk.Key.x));
             writer.Write(Mathf.RoundToInt(chunk.Key.y));
             writer.Write(Mathf.RoundToInt(chunk.Key.z));
@@ -163,9 +169,26 @@ public class ChunkManager : MonoBehaviour {
             {
                 chunks.Add(v, chunk);
             }
+
+            // note even though a chunk is empty, it might still be used to render edges in neighbouring chunks
+            for (int i = 0; i < offset.GetLength(0); i++)
+            {
+                var vo = v + new Vint3(offset[i, 0], offset[i, 1], offset[i, 2]);
+                neighbours.Add(vo);
+            }
         }
         
         reader.Close();
+
+        foreach (var v in neighbours)
+        {
+            if (chunks.ContainsKey(v))
+            {
+                continue;
+            }
+            var chunk = CreateChunk(v);
+            chunks.Add(v, chunk);
+        }
 
         foreach (var chunk in chunks)
         {
