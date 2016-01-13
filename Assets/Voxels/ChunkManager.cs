@@ -32,6 +32,7 @@ public class ChunkManager : MonoBehaviour {
     private readonly List<VoxelChunk> justPainted = new List<VoxelChunk>();
     private readonly HashSet<Vint3> update = new HashSet<Vint3>();
     private readonly List<Vint3> modified = new List<Vint3>();
+    private readonly List<Vint3> redraw = new List<Vint3>();
 
     private void Awake()
     {
@@ -48,21 +49,25 @@ public class ChunkManager : MonoBehaviour {
             return;
         }
 
-        foreach (var v in update)
+        // to prevent creating garbage when looping through updated elements
+        redraw.Clear();
+        redraw.AddRange(update);
+        update.Clear();
+
+        for (int i = 0; i < redraw.Count; i++)
         {
-            if (chunks.ContainsKey(v))
+            if (chunks.ContainsKey(redraw[i]))
             {
                 continue;
             }
-            var chunk = CreateChunk(v);
-            chunks.Add(v, chunk);
+            var chunk = CreateChunk(redraw[i]);
+            chunks.Add(redraw[i], chunk);
         }
 
-        foreach (var v in update)
+        for (int i = 0; i < redraw.Count; i++)
         {
-            chunks[v].UpdateChunk();
+            chunks[redraw[i]].UpdateChunk();
         }
-        update.Clear();
     }
 
     private int[,] offset =

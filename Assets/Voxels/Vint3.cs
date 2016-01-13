@@ -80,7 +80,7 @@ public struct Vint3 : IEquatable<Vint3>
 
     public override string ToString()
     {
-        return "(" + x + "," + y + "," + z + ")";
+        return string.Format("({0},{1},{2})", x, y, z);
     }
 }
 
