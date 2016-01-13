@@ -123,6 +123,24 @@ public class VoxelChunk : MonoBehaviour, MarchingCubes.ByteData
     //    }
     //}
 
+    public bool IsEmpty()
+    {
+        for (int x = 0; x < data.GetLength(0); x++)
+        {
+            for (int y = 0; y < data.GetLength(1); y++)
+            {
+                for (int z = 0; z < data.GetLength(2); z++)
+                {
+                    if (data[x, y, z] != 0)
+                    {
+                        return false;
+                    }
+                }
+            }
+        }
+        return true;
+    }
+
     public void SaveChunk(BinaryWriter writer)
     {
         for (int x = 0; x < data.GetLength(0); x++)
