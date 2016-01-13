@@ -10,6 +10,8 @@ public class MouseKeyboardPainter : MonoBehaviour
     public float speed = 2;
     public float boost = 5;
 
+    public Transform cursor;
+
     // Use this for initialization
     void Start () {
 	
@@ -40,5 +42,13 @@ public class MouseKeyboardPainter : MonoBehaviour
             transform.Translate(move * Time.deltaTime, Space.Self);
             transform.Rotate(look.eulerAngles, Space.Self);
 	    }
+
+        var ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+        cursor.position = ray.origin + ray.direction * 32;
+
+        if (Input.GetMouseButton(0))
+        {
+            ChunkManager.Instance.Draw(cursor.position, radius, color);
+        }
 	}
 }

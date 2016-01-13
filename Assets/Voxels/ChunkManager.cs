@@ -1,7 +1,9 @@
 ﻿using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
+#if !UNITY_WEBGL
 using System.IO;
+#endif
 
 public class ChunkManager : MonoBehaviour {
 
@@ -109,6 +111,7 @@ public class ChunkManager : MonoBehaviour {
 
     public void SaveChunks(string path)
     {
+#if !UNITY_WEBGL
         var stream = File.OpenWrite(path);
         var writer = new BinaryWriter(stream);
 
@@ -124,10 +127,12 @@ public class ChunkManager : MonoBehaviour {
 
         writer.Close();
         Debug.Log(chunks.Count + " chunks written to " + path);
+#endif
     }
 
     public void LoadChunks(string path)
     {
+#if !UNITY_WEBGL
         foreach (var chunk in chunks)
         {
             Destroy(chunk.Value.gameObject);
@@ -168,5 +173,6 @@ public class ChunkManager : MonoBehaviour {
         }
 
         Debug.Log(chunks.Count + " chunks loaded from " + path);
+#endif
     }
 }
