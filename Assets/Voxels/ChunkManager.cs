@@ -22,12 +22,48 @@ public class ChunkManager : MonoBehaviour {
         }
     }
 
+    public static bool IsServer = false;
+    public static bool IsConnected = false;
+
     public int size = 16;
     public Material material;
 
     private readonly Dictionary<Vint3, VoxelChunk> chunks = new Dictionary<Vint3, VoxelChunk>();
     private readonly List<VoxelChunk> justPainted = new List<VoxelChunk>();
-    private readonly HashSet<Vint3> neighbours = new HashSet<Vint3>();
+    private readonly HashSet<Vint3> update = new HashSet<Vint3>();
+    private readonly List<Vint3> modified = new List<Vint3>();
+
+    private void Awake()
+    {
+        if (SystemInfo.graphicsDeviceID == 0)
+        {
+            IsServer = true;
+        }
+    }
+
+    private void Update()
+    {
+        if (update.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var v in update)
+        {
+            if (chunks.ContainsKey(v))
+            {
+                continue;
+            }
+            var chunk = CreateChunk(v);
+            chunks.Add(v, chunk);
+        }
+
+        foreach (var v in update)
+        {
+            chunks[v].UpdateChunk();
+        }
+        update.Clear();
+    }
 
     private int[,] offset =
     {
@@ -76,15 +112,13 @@ public class ChunkManager : MonoBehaviour {
             if (chunks[v].bounds.Intersects(bounds))
             {
                 chunks[v].Draw(position, radius, color);
-                justPainted.Add(chunks[v]);
+                update.Add(v);
+                if (IsConnected && !modified.Contains(v))
+                {
+                    modified.Add(v);
+                }
             }
         }
-
-        for (int i = 0; i < justPainted.Count; i++)
-        {
-            justPainted[i].UpdateChunk();
-        }
-        justPainted.Clear();
     }
 
     private VoxelChunk CreateChunk(Vint3 intPos)
@@ -93,8 +127,11 @@ public class ChunkManager : MonoBehaviour {
         var chunk = go.AddComponent<VoxelChunk>();
         chunk.Initialize(size, 1, intPos.Vector * size, intPos);
 
-        var rend = go.AddComponent<MeshRenderer>();
-        rend.sharedMaterial = material;
+        if (!IsServer)
+        {
+            var rend = go.AddComponent<MeshRenderer>();
+            rend.sharedMaterial = material;
+        }
 
         go.transform.SetParent(transform, false);
 
@@ -125,9 +162,9 @@ public class ChunkManager : MonoBehaviour {
                 continue;
             }
 
-            writer.Write(Mathf.RoundToInt(chunk.Key.x));
-            writer.Write(Mathf.RoundToInt(chunk.Key.y));
-            writer.Write(Mathf.RoundToInt(chunk.Key.z));
+            writer.Write(chunk.Key.x);
+            writer.Write(chunk.Key.y);
+            writer.Write(chunk.Key.z);
             chunk.Value.SaveChunk(writer);
         }
 
@@ -157,45 +194,53 @@ public class ChunkManager : MonoBehaviour {
 
         while (stream.Position < stream.Length)
         {
-            var v = new Vint3(reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32());
-            var chunk = CreateChunk(v);
-            chunk.LoadChunk(reader);
-
-            if (chunks.ContainsKey(v))
-            {
-                Debug.LogError(v + " duplicated in data");
-            }
-            else
-            {
-                chunks.Add(v, chunk);
-            }
-
-            // note even though a chunk is empty, it might still be used to render edges in neighbouring chunks
-            for (int i = 0; i < offset.GetLength(0); i++)
-            {
-                var vo = v + new Vint3(offset[i, 0], offset[i, 1], offset[i, 2]);
-                neighbours.Add(vo);
-            }
+            LoadChunk(reader);
         }
         
         reader.Close();
+        
 
-        foreach (var v in neighbours)
+        Debug.Log(chunks.Count + " chunks loaded from " + path);
+#endif
+    }
+
+    // used for networking only
+    public int PollChanges(BinaryWriter writer)
+    {
+        if (modified.Count == 0)
         {
-            if (chunks.ContainsKey(v))
-            {
-                continue;
-            }
+            return 0;
+        }
+        var v = modified[modified.Count - 1];
+        modified.RemoveAt(modified.Count - 1);
+
+        VoxelChunk chunk;
+        if (chunks.TryGetValue(v, out chunk))
+        {
+            writer.Write(v.x);
+            writer.Write(v.y);
+            writer.Write(v.z);
+            chunk.SaveChunk(writer);
+        }
+
+        return modified.Count;
+    }
+
+    public void LoadChunk(BinaryReader reader)
+    {
+        var v = new Vint3(reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32());
+        if (!chunks.ContainsKey(v))
+        {
             var chunk = CreateChunk(v);
             chunks.Add(v, chunk);
         }
 
-        foreach (var chunk in chunks)
-        {
-            chunk.Value.UpdateChunk();
-        }
+        chunks[v].LoadChunk(reader);
 
-        Debug.Log(chunks.Count + " chunks loaded from " + path);
-#endif
+        for (int i = 0; i < offset.GetLength(0); i++)
+        {
+            var vo = v + new Vint3(offset[i, 0], offset[i, 1], offset[i, 2]);
+            update.Add(vo);
+        }
     }
 }

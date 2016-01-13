@@ -30,10 +30,10 @@ public class HydraPainter : MonoBehaviour
             ChunkManager.Instance.LoadChunks(scene + ".vox");
         }
 
-	    var renderes = GetComponentsInChildren<Renderer>(true);
-	    for (int i = 0; i < renderes.Length; i++)
+	    var renderers = GetComponentsInChildren<Renderer>(true);
+	    for (int i = 0; i < renderers.Length; i++)
 	    {
-	        renderes[i].enabled = true;
+	        renderers[i].enabled = true;
 	    }
 
         material = GetComponentInChildren<Renderer>().sharedMaterial;
