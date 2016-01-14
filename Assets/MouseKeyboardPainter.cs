@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using System.Collections;
+using VildNinja.Voxels;
 
 public class MouseKeyboardPainter : MonoBehaviour
 {

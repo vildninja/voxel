@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using System.Collections;
+using VildNinja.Voxels;
 
 public class HydraPainter : MonoBehaviour
 {
@@ -30,7 +31,12 @@ public class HydraPainter : MonoBehaviour
             ChunkManager.Instance.LoadChunks(scene + ".vox");
         }
 
-	    var renderers = GetComponentsInChildren<Renderer>(true);
+        while (SixenseInput.GetController(hand) == null)
+        {
+            yield return null;
+        }
+
+        var renderers = GetComponentsInChildren<Renderer>(true);
 	    for (int i = 0; i < renderers.Length; i++)
 	    {
 	        renderers[i].enabled = true;
@@ -38,11 +44,6 @@ public class HydraPainter : MonoBehaviour
 
         material = GetComponentInChildren<Renderer>().sharedMaterial;
         material.color = MarchingCubes.Builder.colorMap[color];
-
-        while (SixenseInput.GetController(hand) == null)
-	    {
-	        yield return null;
-	    }
 
 	    controller = SixenseInput.GetController(hand);
     }
