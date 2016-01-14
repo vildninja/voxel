@@ -1,6 +1,8 @@
 ﻿using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
+using VildNinja.Voxels.Web;
+using VildNinja.Utils;
 #if !UNITY_WEBGL
 using System.IO;
 #endif
@@ -25,23 +27,18 @@ namespace VildNinja.Voxels
             }
         }
 
-        public static bool IsServer = false;
-        public static bool IsConnected = false;
-
         public int size = 16;
         public Material material;
 
         private readonly Dictionary<Vint3, VoxelChunk> chunks = new Dictionary<Vint3, VoxelChunk>();
-        private readonly List<VoxelChunk> justPainted = new List<VoxelChunk>();
-        private readonly HashSet<Vint3> update = new HashSet<Vint3>();
+        private readonly HashList<Vint3> update = new HashList<Vint3>();
         private readonly List<Vint3> modified = new List<Vint3>();
-        private readonly List<Vint3> redraw = new List<Vint3>();
 
-        private void Awake()
+        public IEnumerable<Vint3> AllChunks
         {
-            if (SystemInfo.graphicsDeviceID == 0)
+            get
             {
-                IsServer = true;
+                return chunks.Keys;
             }
         }
 
@@ -52,25 +49,22 @@ namespace VildNinja.Voxels
                 return;
             }
 
-            // to prevent creating garbage when looping through updated elements
-            redraw.Clear();
-            redraw.AddRange(update);
-            update.Clear();
-
-            for (int i = 0; i < redraw.Count; i++)
+            foreach (var redraw in update)
             {
-                if (chunks.ContainsKey(redraw[i]))
+                if (chunks.ContainsKey(redraw))
                 {
                     continue;
                 }
-                var chunk = CreateChunk(redraw[i]);
-                chunks.Add(redraw[i], chunk);
+                var chunk = CreateChunk(redraw);
+                chunks.Add(redraw, chunk);
             }
 
-            for (int i = 0; i < redraw.Count; i++)
+            foreach (var redraw in update)
             {
-                chunks[redraw[i]].UpdateChunk();
+                chunks[redraw].UpdateChunk();
             }
+
+            update.Clear();
         }
 
         private int[,] offset =
@@ -100,16 +94,14 @@ namespace VildNinja.Voxels
         public void Draw(Vector3 position, float radius, byte color)
         {
             position = transform.InverseTransformPoint(position);
-
-            int x = Mathf.FloorToInt(position.x/size);
-            int y = Mathf.FloorToInt(position.y/size);
-            int z = Mathf.FloorToInt(position.z/size);
+            
+            var pos = new Vint3(position) / size;
 
             var bounds = new Bounds(position, new Vector3(radius*2, radius*2, radius*2));
 
-            for (int i = 0; i < offset.GetLength(0); i++)
+            for (int i = 0; i < Vint3.Offset.Length; i++)
             {
-                var v = new Vint3(offset[i, 0] + x, offset[i, 1] + y, offset[i, 2] + z);
+                var v = pos + Vint3.Offset[i];
                 if (!chunks.ContainsKey(v))
                 {
                     var chunk = CreateChunk(v);
@@ -121,7 +113,7 @@ namespace VildNinja.Voxels
                 {
                     chunks[v].Draw(position, radius, color);
                     update.Add(v);
-                    if (IsConnected && !modified.Contains(v))
+                    if (WebManager.IsConnected && !modified.Contains(v))
                     {
                         modified.Add(v);
                     }
@@ -135,7 +127,7 @@ namespace VildNinja.Voxels
             var chunk = go.AddComponent<VoxelChunk>();
             chunk.Initialize(size, intPos.Vector*size, intPos);
 
-            if (!IsServer)
+            if (!WebManager.IsServer)
             {
                 var rend = go.AddComponent<MeshRenderer>();
                 rend.sharedMaterial = material;
@@ -179,11 +171,22 @@ namespace VildNinja.Voxels
                     continue;
                 }
 
-                writer.Write(chunk.Key.x);
-                writer.Write(chunk.Key.y);
-                writer.Write(chunk.Key.z);
-                chunk.Value.SaveChunk(writer);
+                SaveChunk(chunk.Value, writer);
             }
+        }
+
+        public void SaveChunk(VoxelChunk chunk, BinaryWriter writer)
+        {
+            writer.Write(chunk.iPos.x);
+            writer.Write(chunk.iPos.y);
+            writer.Write(chunk.iPos.z);
+            chunk.SaveChunk(writer);
+        }
+
+        public void SaveChunk(Vint3 pos, BinaryWriter writer)
+        {
+            var chunk = chunks[pos];
+            SaveChunk(chunk, writer);
         }
 
         public void LoadChunks(string path)
@@ -239,7 +242,7 @@ namespace VildNinja.Voxels
             return modified.Count;
         }
 
-        public void LoadChunk(BinaryReader reader)
+        public Vint3 LoadChunk(BinaryReader reader)
         {
             var v = new Vint3(reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32());
             if (!chunks.ContainsKey(v))
@@ -255,6 +258,8 @@ namespace VildNinja.Voxels
                 var vo = v + new Vint3(offset[i, 0], offset[i, 1], offset[i, 2]);
                 update.Add(vo);
             }
+
+            return v;
         }
     }
 }

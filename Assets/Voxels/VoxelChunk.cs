@@ -2,6 +2,7 @@
 using System.Collections;
 using System.IO;
 using System;
+using VildNinja.Voxels.Web;
 
 namespace VildNinja.Voxels
 {
@@ -12,10 +13,11 @@ namespace VildNinja.Voxels
         private byte[,,] data;
 
         private Mesh mesh;
+        private MeshCollider collider;
 
         public Bounds bounds;
 
-        private Vint3 logicPos;
+        public Vint3 iPos;
 
         public int Length
         {
@@ -39,7 +41,7 @@ namespace VildNinja.Voxels
                 }
                 else
                 {
-                    return ChunkManager.Instance.GetSingleVoxel(logicPos*size + pos);
+                    return ChunkManager.Instance.GetSingleVoxel(iPos*size + pos);
                 }
             }
         }
@@ -48,14 +50,16 @@ namespace VildNinja.Voxels
         public void Initialize(int size, Vector3 position, Vint3 intPos)
         {
             this.size = size;
-            logicPos = intPos;
+            iPos = intPos;
             data = new byte[size, size, size];
 
-            if (!ChunkManager.IsServer)
+            if (!WebManager.IsServer)
             {
                 mesh = new Mesh();
                 var filter = gameObject.AddComponent<MeshFilter>();
                 filter.mesh = mesh;
+                collider = gameObject.AddComponent<MeshCollider>();
+                collider.sharedMesh = mesh;
             }
 
             transform.localPosition = position;
@@ -81,9 +85,10 @@ namespace VildNinja.Voxels
 
         public void UpdateChunk()
         {
-            if (!ChunkManager.IsServer)
+            if (!WebManager.IsServer)
             {
                 MarchingCubes.Builder.ProcessChunk(this, mesh);
+                collider.sharedMesh = mesh;
             }
         }
 

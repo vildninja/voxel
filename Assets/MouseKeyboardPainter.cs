@@ -13,6 +13,8 @@ public class MouseKeyboardPainter : MonoBehaviour
 
     public Transform cursor;
 
+    private float depth = 32;
+
     // Use this for initialization
     void Start () {
 	
@@ -45,11 +47,20 @@ public class MouseKeyboardPainter : MonoBehaviour
 	    }
 
         var ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-        cursor.position = ray.origin + ray.direction * 32;
+
 
         if (Input.GetMouseButton(0))
         {
             ChunkManager.Instance.Draw(cursor.position, radius, color);
         }
-	}
+        else
+        {
+            RaycastHit hit;
+            if (Physics.Raycast(ray, out hit))
+            {
+                depth = hit.distance;
+            }
+        }
+        cursor.position = ray.origin + ray.direction * depth;
+    }
 }

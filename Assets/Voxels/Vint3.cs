@@ -21,9 +21,9 @@ namespace VildNinja.Voxels
 
         public Vint3(Vector3 vec)
         {
-            x = Mathf.RoundToInt(vec.x);
-            y = Mathf.RoundToInt(vec.y);
-            z = Mathf.RoundToInt(vec.z);
+            x = Mathf.FloorToInt(vec.x);
+            y = Mathf.FloorToInt(vec.y);
+            z = Mathf.FloorToInt(vec.z);
         }
 
         public static Vint3 operator +(Vint3 a, Vint3 b)
@@ -85,5 +85,18 @@ namespace VildNinja.Voxels
         {
             return string.Format("({0},{1},{2})", x, y, z);
         }
+
+        public static readonly Vint3[] Offset =
+        {
+            new Vint3(-1, -1, -1), new Vint3(-1, -1, 0), new Vint3(-1, -1, 1),
+            new Vint3(-1, 0, -1), new Vint3(-1, 0, 0), new Vint3(-1, 0, 1),
+            new Vint3(-1, 1, -1), new Vint3(-1, 1, 0), new Vint3(-1, 1, 1),
+            new Vint3(0, -1, -1), new Vint3(0, -1, 0), new Vint3(0, -1, 1),
+            new Vint3(0, 0, -1), new Vint3(0, 0, 0), new Vint3(0, 0, 1),
+            new Vint3(0, 1, -1), new Vint3(0, 1, 0), new Vint3(0, 1, 1),
+            new Vint3(1, -1, -1), new Vint3(1, -1, 0), new Vint3(1, -1, 1),
+            new Vint3(1, 0, -1), new Vint3(1, 0, 0), new Vint3(1, 0, 1),
+            new Vint3(1, 1, -1), new Vint3(1, 1, 0), new Vint3(1, 1, 1)
+        };
     }
 }
