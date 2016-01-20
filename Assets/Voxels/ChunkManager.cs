@@ -27,7 +27,7 @@ namespace VildNinja.Voxels
             }
         }
 
-        public int size = 16;
+        public int size = 8;
         public Material material;
 
         private readonly Dictionary<Vint3, VoxelChunk> chunks = new Dictionary<Vint3, VoxelChunk>();

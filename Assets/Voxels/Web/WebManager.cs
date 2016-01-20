@@ -12,17 +12,26 @@ namespace VildNinja.Voxels.Web
         private WebClient client;
         private float counter;
 
+        [SerializeField]
+        private bool forceServer;
+
         // Use this for initialization
         void Awake()
         {
-            if (SystemInfo.graphicsDeviceID == 0)
+            if (SystemInfo.graphicsDeviceID == 0 || forceServer)
             {
                 IsServer = true;
 
                 server = new WebServer(19219);
 
                 ChunkManager.Instance.LoadChunks("server.vox");
+                server.RefreshMap();
                 
+            }
+            else
+            {
+                client = new WebClient();
+                client.TryConnect("localhost", 19219);
             }
         }
         
@@ -30,14 +39,26 @@ namespace VildNinja.Voxels.Web
         // Update is called once per frame
         void Update()
         {
-
-
-            counter += Time.deltaTime;
-            if (counter > 0.5f)
+            if (IsServer)
             {
-
+                server.PollNetwork();
+                if (counter > 0.5f)
+                {
+                    server.Tick();
+                    counter = 0;
+                }
+            }
+            else
+            {
+                client.PollNetwork();
+                if (counter > 0.5f && IsConnected)
+                {
+                    client.SendChanges(transform.position);
+                    counter = 0;
+                }
             }
 
+            counter += Time.deltaTime;
         }
     }
 }

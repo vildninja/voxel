@@ -91,12 +91,18 @@ namespace VildNinja.Voxels.Web
             }
         }
 
-        public void SendChanges()
+        public void SendChanges(Vector3 position)
         {
             if (!isConnected)
             {
                 return;
             }
+            
+            ms.Position = 0;
+            writer.Write(position.x);
+            writer.Write(position.y);
+            writer.Write(position.z);
+            NetworkTransport.Send(host, connection, movement, buffer, (int)ms.Position, out error);
 
             ms.Position = 0;
             for (int j = 0; j < 30; j++)
