@@ -32,7 +32,7 @@ namespace VildNinja.Voxels
 
         private readonly Dictionary<Vint3, VoxelChunk> chunks = new Dictionary<Vint3, VoxelChunk>();
         private readonly HashList<Vint3> update = new HashList<Vint3>();
-        private readonly List<Vint3> modified = new List<Vint3>();
+        private readonly Queue<Vint3> painted = new Queue<Vint3>();
 
         public IEnumerable<Vint3> AllChunks
         {
@@ -113,9 +113,9 @@ namespace VildNinja.Voxels
                 {
                     chunks[v].Draw(position, radius, color);
                     update.Add(v);
-                    if (WebManager.IsConnected && !modified.Contains(v))
+                    if (WebManager.IsConnected && !painted.Contains(v))
                     {
-                        modified.Add(v);
+                        painted.Enqueue(v);
                     }
                 }
             }
@@ -223,12 +223,11 @@ namespace VildNinja.Voxels
         // used for networking only
         public int PollChanges(BinaryWriter writer)
         {
-            if (modified.Count == 0)
+            if (painted.Count == 0)
             {
                 return 0;
             }
-            var v = modified[modified.Count - 1];
-            modified.RemoveAt(modified.Count - 1);
+            var v = painted.Dequeue();
 
             VoxelChunk chunk;
             if (chunks.TryGetValue(v, out chunk))
@@ -239,7 +238,7 @@ namespace VildNinja.Voxels
                 chunk.SaveChunk(writer);
             }
 
-            return modified.Count;
+            return painted.Count;
         }
 
         public Vint3 LoadChunk(BinaryReader reader)

@@ -169,8 +169,10 @@ namespace VildNinja.Voxels.Web
             
             tick++;
             
+            // go through all changes made
             foreach (var change in changes)
             {
+                // find each change's area
                 var area = change / 64;
                 List<AreaHistory> steps;
 
@@ -181,16 +183,41 @@ namespace VildNinja.Voxels.Web
                     history.Add(area, steps);
                 }
                 
+                // if area doesn't already have a history for this tick: create one
                 if (steps[steps.Count - 1].time < tick)
                 {
-                    if (steps.Count == 10)
+                    // if we have 10 history entries for this area merge the last two together
+                    // and reuse one as the new top entry. Else add a new top entry.
+                    if (steps.Count >= 10)
                     {
-                        steps.Add(steps[1]);
+                        var swap = steps[1];
                         steps.RemoveAt(1);
-                        //steps[0].changes.Add
+                        steps[0].changes.AddRange(swap.changes);
+                        steps[0].time = swap.time;
+                        swap.changes.Clear();
+                        swap.time = tick;
+                        steps.Add(swap);
+                    }
+                    else
+                    {
+                        steps.Add(new AreaHistory(tick));
                     }
                 }
+
+                // make sure that each change is only represented at ONE history step
+                for (int i = 0; i < steps.Count; i++)
+                {
+                    if (steps[i].changes.Remove(change))
+                    {
+                        break;
+                    }
+                }
+
+                // add the change to the top history step
+                steps[steps.Count - 1].changes.Add(change);
             }
+
+            changes.Clear();
         }
 
         private void SendArea(Player player, Vint3 area)

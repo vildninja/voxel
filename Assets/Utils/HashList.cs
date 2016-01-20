@@ -7,12 +7,52 @@ namespace VildNinja.Utils
 {
     /// <summary>
     /// A HashSet capable of running in foreach, without generating garbage.
-    /// DO NOTE: it is its own Enumerator! You can only run ONE enumeration
-    /// at the time. 
+    /// Do note that it needs to check the entire allocated array when iterating
+    /// (skipping all empty fields)
     /// </summary>
     /// <typeparam name="T">Type of item</typeparam>
-    public class HashList<T> : IEquatable<HashList<T>>, IEnumerable<T>, IEnumerator<T> where T : IEquatable<T>
+    public class HashList<T> : IEquatable<HashList<T>>, IEnumerable<T> where T : IEquatable<T>
     {
+
+        private class HashListEnumerator<E> : IEnumerator<E> where E : IEquatable<E>
+        {
+            public HashList<E> list;
+
+            private int index;
+
+            public bool MoveNext()
+            {
+                while (index < list.open.Length - 1)
+                {
+                    index++;
+                    if (list.open[index] == 2)
+                    {
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            public void Reset()
+            {
+                index = -1;
+            }
+
+            public E Current { get { return list.array[index]; } }
+
+            object IEnumerator.Current
+            {
+                get { return Current; }
+            }
+
+            public void Dispose()
+            {
+                enumerators[typeof(E)].Add(this);
+            }
+        }
+
+        private static readonly Dictionary<Type, List<object>> enumerators = new Dictionary<Type, List<object>>();  
+
         private T[] array;
         private byte[] open;
         private int count;
@@ -174,52 +214,36 @@ namespace VildNinja.Utils
                 }
             }
         }
-
-        private int index = -1;
-
-        public bool MoveNext()
-        {
-            while (index < open.Length - 1)
-            {
-                index++;
-                if (open[index] == 2)
-                {
-                    return true;
-                }
-            }
-            return false;
-        }
+        
 
         public IEnumerator<T> GetEnumerator()
         {
-            index = -1;
-            return this;
+            List<object> list;
+            if (!enumerators.TryGetValue(typeof (T), out list))
+            {
+                list = new List<object>();
+                enumerators.Add(typeof(T), list);
+            }
+
+            HashListEnumerator<T> enumerator;
+            if (list.Count > 0)
+            {
+                enumerator = (HashListEnumerator<T>)list[list.Count - 1];
+                list.RemoveAt(list.Count - 1);
+            }
+            else
+            {
+                enumerator = new HashListEnumerator<T>();
+            }
+
+            enumerator.Reset();
+            enumerator.list = this;
+            return enumerator;
         }
 
         IEnumerator IEnumerable.GetEnumerator()
         {
-            index = -1;
-            return this;
-        }
-
-        public void Reset()
-        {
-            index = -1;
-        }
-
-        public void Dispose()
-        {
-            // this enumerator is itself.. do not dispose.
-        }
-
-        public T Current
-        {
-             get { return array[index]; }
-        }
-
-        object IEnumerator.Current
-        {
-            get { return array[index]; }
+            return GetEnumerator();
         }
 
         public bool Equals(HashList<T> other)
