@@ -6,11 +6,14 @@ namespace VildNinja.Voxels.Web
     public class WebManager : MonoBehaviour
     {
         public static bool IsServer = false;
-        internal static bool IsConnected = false;
+        public static bool IsConnected = false;
 
         private WebServer server;
         private WebClient client;
         private float counter;
+        private int saveTimer;
+
+        public Vector3 position;
 
         [SerializeField]
         private bool forceServer;
@@ -31,7 +34,7 @@ namespace VildNinja.Voxels.Web
             else
             {
                 client = new WebClient();
-                client.TryConnect("localhost", 19219);
+                client.TryConnect("127.0.0.1", 19219);
             }
         }
         
@@ -46,6 +49,13 @@ namespace VildNinja.Voxels.Web
                 {
                     server.Tick();
                     counter = 0;
+                    saveTimer++;
+
+                    if (saveTimer > 30)
+                    {
+                        ChunkManager.Instance.SaveChunks("server.vox");
+                        saveTimer = 0;
+                    }
                 }
             }
             else
@@ -53,7 +63,7 @@ namespace VildNinja.Voxels.Web
                 client.PollNetwork();
                 if (counter > 0.5f && IsConnected)
                 {
-                    client.SendChanges(transform.position);
+                    client.SendChanges(position);
                     counter = 0;
                 }
             }

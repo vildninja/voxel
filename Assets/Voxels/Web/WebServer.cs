@@ -34,7 +34,7 @@ namespace VildNinja.Voxels.Web
         private readonly int host;
         private readonly int channel;
         private readonly int movement;
-        private readonly Dictionary<int, Player> players;
+        private readonly List<Player> players;
         private readonly Dictionary<Vint3, List<AreaHistory>> history;
 
         private readonly HashList<Vint3> changes;
@@ -50,7 +50,7 @@ namespace VildNinja.Voxels.Web
 
             big = new MemoryStream();
 
-            players = new Dictionary<int, Player>();
+            players = new List<Player>();
             history = new Dictionary<Vint3, List<AreaHistory>>();
             changes = new HashList<Vint3>();
 
@@ -60,9 +60,9 @@ namespace VildNinja.Voxels.Web
             config.PacketSize = 11000;
             config.Channels.Add(new ChannelQOS(QosType.ReliableSequenced));
             channel = 0;
-            config.Channels.Add(new ChannelQOS(QosType.Reliable));
+            config.Channels.Add(new ChannelQOS(QosType.Unreliable));
             movement = 1;
-            var topology = new HostTopology(config, 1);
+            var topology = new HostTopology(config, 200);
             host = NetworkTransport.AddHost(topology, port);
         }
 
@@ -99,21 +99,28 @@ namespace VildNinja.Voxels.Web
                 switch (reply)
                 {
                     case NetworkEventType.ConnectEvent:
-                        if (!players.ContainsKey(connId))
-                        {
-                            var player = new Player(connId);
-                            players.Add(connId, player);
-                        }
+                        var player = new Player(connId);
+                        players.Add(player);
+                        Debug.Log("New player connected: " + connId);
 
                         break;
                     case NetworkEventType.DisconnectEvent:
-                        players.Remove(connId);
+                        for (int j = 0; j < players.Count; j++)
+                        {
+                            if (players[j].connection == connId)
+                            {
+                                players.RemoveAt(j);
+                                break;
+                            }
+                        }
+                        Debug.Log("New player disconnected: " + connId);
 
                         break;
                     case NetworkEventType.DataEvent:
 
                         if (chanId == channel)
                         {
+                            Debug.Log("Data received from: " + connId + " - " + size + " bytes");
                             ReceiveChanges(size);
                         }
                         else if (chanId == movement)
@@ -123,7 +130,7 @@ namespace VildNinja.Voxels.Web
 
                         break;
                     case NetworkEventType.Nothing:
-                        i = 10;
+                        i = 10000;
                         break;
                 }
             }
@@ -141,7 +148,16 @@ namespace VildNinja.Voxels.Web
 
         private void PlayerMovedTo(int connection)
         {
-            var player = players[connection];
+            Player player = null;
+            for (int i = 0; i < players.Count; i++)
+            {
+                if (players[i].connection == connection)
+                {
+                    player = players[i];
+                    break;
+                }
+            }
+
 
             ms.Position = 0;
 
@@ -218,6 +234,15 @@ namespace VildNinja.Voxels.Web
             }
 
             changes.Clear();
+
+            for (int i = 0; i < players.Count; i++)
+            {
+                for (int j = 0; j < Vint3.Offset.Length; j++)
+                {
+                    var a = players[i].area + Vint3.Offset[j];
+                    SendArea(players[i], a);
+                }
+            }
         }
 
         private void SendArea(Player player, Vint3 area)

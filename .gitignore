@@ -5,3 +5,5 @@ VoxDraw.sln
 voxel.CSharp.csproj
 voxel.sln
 webgl/
+serverTest_Data/
+clientTest_Data/

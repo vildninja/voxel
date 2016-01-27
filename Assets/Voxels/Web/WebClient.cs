@@ -37,8 +37,8 @@ namespace VildNinja.Voxels.Web
             config.PacketSize = 11000;
             config.Channels.Add(new ChannelQOS(QosType.ReliableSequenced));
             channel = 0;
-            config.Channels.Add(new ChannelQOS(QosType.Reliable));
-            movement = 0;
+            config.Channels.Add(new ChannelQOS(QosType.Unreliable));
+            movement = 1;
             var topology = new HostTopology(config, 1);
             host = NetworkTransport.AddHost(topology);
         }
