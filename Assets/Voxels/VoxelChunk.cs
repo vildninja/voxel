@@ -2,13 +2,15 @@
 using System.Collections;
 using System.IO;
 using System;
+using System.Collections.Generic;
 using VildNinja.Voxels.Web;
 
 namespace VildNinja.Voxels
 {
     public class VoxelChunk : MonoBehaviour, MarchingCubes.ByteData
     {
-        private int size = 16;
+        private static readonly Stack<bool[,,]> boolPool = new Stack<bool[,,]>(); 
+        private bool[,,] myChanges;
 
         private byte[,,] data;
 
@@ -21,7 +23,7 @@ namespace VildNinja.Voxels
 
         public int Length
         {
-            get { return size; }
+            get { return ChunkManager.Size; }
         }
 
         public byte this[int x, int y, int z]
@@ -34,24 +36,42 @@ namespace VildNinja.Voxels
             get
             {
                 //return data[x, y, z];
-                var logic = pos/size;
+                var logic = pos/ ChunkManager.Size;
                 if (logic == Vint3.Zero)
                 {
                     return data[pos.x, pos.y, pos.z];
                 }
                 else
                 {
-                    return ChunkManager.Instance.GetSingleVoxel(iPos*size + pos);
+                    return ChunkManager.Instance.GetSingleVoxel(iPos* ChunkManager.Size + pos);
                 }
             }
         }
 
-        // Use this for initialization
-        public void Initialize(int size, Vector3 position, Vint3 intPos)
+        private static bool[,,] RequestBools()
         {
-            this.size = size;
+            if (boolPool.Count > 0)
+            {
+                var b = boolPool.Pop();
+                for (int x = 0; x < b.GetLength(0); x++)
+                {
+                    for (int y = 0; y < b.GetLength(1); y++)
+                    {
+                        for (int z = 0; z < b.GetLength(2); z++)
+                        {
+                            b[x, y, z] = false;
+                        }
+                    }
+                }
+            }
+            return new bool[ChunkManager.Size, ChunkManager.Size, ChunkManager.Size];
+        }
+
+        // Use this for initialization
+        public void Initialize(Vector3 position, Vint3 intPos)
+        {
             iPos = intPos;
-            data = new byte[size, size, size];
+            data = new byte[ChunkManager.Size, ChunkManager.Size, ChunkManager.Size];
 
             if (!WebManager.IsServer)
             {
@@ -63,11 +83,17 @@ namespace VildNinja.Voxels
             }
 
             transform.localPosition = position;
-            bounds = new Bounds(position + new Vector3(size, size, size)*0.5f, new Vector3(size, size, size));
+            bounds = new Bounds(position + new Vector3(ChunkManager.Size, ChunkManager.Size, ChunkManager.Size)*0.5f,
+                new Vector3(ChunkManager.Size, ChunkManager.Size, ChunkManager.Size));
         }
 
         public void Draw(Vector3 position, float radius, byte color)
         {
+            if (myChanges == null)
+            {
+                myChanges = RequestBools();
+            }
+
             for (int x = 0; x < data.GetLength(0); x++)
             {
                 for (int y = 0; y < data.GetLength(1); y++)
@@ -77,6 +103,7 @@ namespace VildNinja.Voxels
                         if (Vector3.Distance(position, transform.localPosition + new Vector3(x, y, z)) < radius)
                         {
                             data[x, y, z] = color;
+                            myChanges[x, y, z] = true;
                         }
                     }
                 }
@@ -187,13 +214,28 @@ namespace VildNinja.Voxels
                             count = reader.ReadByte();
                             current = reader.ReadByte();
                         }
-                        data[x, y, z] = current;
+                        if (myChanges == null || !myChanges[x, y, z])
+                        {
+                            data[x, y, z] = current;
+                        }
                         count--;
 
                         //data[x, y, z] = reader.ReadByte();
                     }
                 }
             }
+
+            if (myChanges != null)
+            {
+                boolPool.Push(myChanges);
+                myChanges = null;
+            }
+        }
+
+        void OnDrawGizmos()
+        {
+            Gizmos.color = Color.white;
+            Gizmos.DrawWireCube(bounds.center, bounds.size);
         }
     }
 }

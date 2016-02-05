@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
 using VildNinja.Voxels.Web;
@@ -27,7 +28,7 @@ namespace VildNinja.Voxels
             }
         }
 
-        public int size = 8;
+        public static int Size = 8;
         public Material material;
 
         private readonly Dictionary<Vint3, VoxelChunk> chunks = new Dictionary<Vint3, VoxelChunk>();
@@ -55,8 +56,7 @@ namespace VildNinja.Voxels
                 {
                     continue;
                 }
-                var chunk = CreateChunk(redraw);
-                chunks.Add(redraw, chunk);
+                CreateChunk(redraw);
             }
 
             foreach (var redraw in update)
@@ -80,14 +80,20 @@ namespace VildNinja.Voxels
             {1, 1, -1}, {1, 1, 0}, {1, 1, 1}
         };
 
+        // Overflow may cause endless recursion. Hence the debugCounter
+        private int debugCounter = 0;
         public byte GetSingleVoxel(Vint3 pos)
         {
-            var logic = pos/size;
+            var logic = pos/Size;
             VoxelChunk chunk;
-            if (chunks.TryGetValue(logic, out chunk))
+            if (debugCounter == 0 && chunks.TryGetValue(logic, out chunk))
             {
-                return chunk[pos - logic*size];
+                debugCounter++;
+                var found = chunk[pos - logic*Size];
+                debugCounter = 0;
+                return found;
             }
+            debugCounter = 0;
             return 0;
         }
 
@@ -95,7 +101,7 @@ namespace VildNinja.Voxels
         {
             position = transform.InverseTransformPoint(position);
             
-            var pos = new Vint3(position) / size;
+            var pos = new Vint3(position) / Size;
 
             var bounds = new Bounds(position, new Vector3(radius*2, radius*2, radius*2));
 
@@ -104,9 +110,7 @@ namespace VildNinja.Voxels
                 var v = pos + Vint3.Offset[i];
                 if (!chunks.ContainsKey(v))
                 {
-                    var chunk = CreateChunk(v);
-
-                    chunks.Add(v, chunk);
+                    CreateChunk(v);
                 }
 
                 if (chunks[v].bounds.Intersects(bounds))
@@ -123,9 +127,17 @@ namespace VildNinja.Voxels
 
         private VoxelChunk CreateChunk(Vint3 intPos)
         {
+            if (intPos.x > int.MaxValue - 100 || intPos.x < int.MinValue + 100 ||
+                intPos.y > int.MaxValue - 100 || intPos.y < int.MinValue + 100 ||
+                intPos.z > int.MaxValue - 100 || intPos.z < int.MinValue + 100)
+            {
+                Debug.LogError("Attempted to create chung close to border: " + intPos);
+                return null;
+            }
+
             var go = new GameObject("Chunk" + intPos);
             var chunk = go.AddComponent<VoxelChunk>();
-            chunk.Initialize(size, intPos.Vector*size, intPos);
+            chunk.Initialize(intPos.Vector*Size, intPos);
 
             if (!WebManager.IsServer)
             {
@@ -134,6 +146,8 @@ namespace VildNinja.Voxels
             }
 
             go.transform.SetParent(transform, false);
+
+            chunks.Add(intPos, chunk);
 
             return chunk;
         }
@@ -153,7 +167,7 @@ namespace VildNinja.Voxels
             var stream = File.Create(path);
             var writer = new BinaryWriter(stream);
 
-            writer.Write(size);
+            writer.Write(Size);
 
             SaveChunks(writer);
 
@@ -206,7 +220,7 @@ namespace VildNinja.Voxels
             var stream = File.OpenRead(path);
             var reader = new BinaryReader(stream);
 
-            size = reader.ReadInt32();
+            Size = reader.ReadInt32();
 
             while (stream.Position < stream.Length)
             {
@@ -246,8 +260,7 @@ namespace VildNinja.Voxels
             var v = new Vint3(reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32());
             if (!chunks.ContainsKey(v))
             {
-                var chunk = CreateChunk(v);
-                chunks.Add(v, chunk);
+                CreateChunk(v);
             }
 
             chunks[v].LoadChunk(reader);
