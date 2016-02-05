@@ -7,7 +7,7 @@ using VildNinja.Voxels.Web;
 
 public class PlayerPainter : MonoBehaviour {
 
-    public byte color = 1;
+    public byte color = 2;
     public float radius = 1;
 
     public float speed = 2;
@@ -109,13 +109,13 @@ public class PlayerPainter : MonoBehaviour {
             if (evt.type == EventType.ScrollWheel)
             {
                 int c = color + Mathf.RoundToInt(Mathf.Sign(evt.delta.y));
-                if (c < 0)
+                if (c < 1)
                 {
                     c = MarchingCubes.Builder.colorMap.Length - 1;
                 }
                 else if (c >= MarchingCubes.Builder.colorMap.Length)
                 {
-                    c = 0;
+                    c = 1;
                 }
                 color = (byte)c;
 

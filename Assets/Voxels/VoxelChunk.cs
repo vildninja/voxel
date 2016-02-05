@@ -11,6 +11,7 @@ namespace VildNinja.Voxels
     {
         private static readonly Stack<bool[,,]> boolPool = new Stack<bool[,,]>(); 
         private bool[,,] myChanges;
+        private int changeCount;
 
         private byte[,,] data;
 
@@ -92,6 +93,7 @@ namespace VildNinja.Voxels
             if (myChanges == null)
             {
                 myChanges = RequestBools();
+                changeCount = 0;
             }
 
             for (int x = 0; x < data.GetLength(0); x++)
@@ -104,6 +106,7 @@ namespace VildNinja.Voxels
                         {
                             data[x, y, z] = color;
                             myChanges[x, y, z] = true;
+                            changeCount++;
                         }
                     }
                 }
@@ -118,26 +121,6 @@ namespace VildNinja.Voxels
                 collider.sharedMesh = mesh;
             }
         }
-
-        //void OnDrawGizmos()
-        //{
-        //    if (data == null)
-        //    {
-        //        return;
-        //    }
-
-        //    for (int x = 0; x < data.GetLength(0); x++)
-        //    {
-        //        for (int y = 0; y < data.GetLength(1); y++)
-        //        {
-        //            for (int z = 0; z < data.GetLength(2); z++)
-        //            {
-        //                Gizmos.color = data[x, y, z] == 0 ? Color.blue : Color.green;
-        //                Gizmos.DrawSphere(transform.position + new Vector3(x, y, z), 0.05f);
-        //            }
-        //        }
-        //    }
-        //}
 
         public bool IsEmpty()
         {
@@ -214,7 +197,14 @@ namespace VildNinja.Voxels
                             count = reader.ReadByte();
                             current = reader.ReadByte();
                         }
-                        if (myChanges == null || !myChanges[x, y, z])
+
+                        if (myChanges != null && myChanges[x, y, z] && data[x, y, z] == current)
+                        {
+                            myChanges[x, y, z] = false;
+                            changeCount--;
+                        }
+
+                        if (data[x, y, z] == 0 || myChanges == null || !myChanges[x, y, z])
                         {
                             data[x, y, z] = current;
                         }
@@ -225,7 +215,7 @@ namespace VildNinja.Voxels
                 }
             }
 
-            if (myChanges != null)
+            if (myChanges != null && changeCount <= 0)
             {
                 boolPool.Push(myChanges);
                 myChanges = null;
@@ -237,5 +227,25 @@ namespace VildNinja.Voxels
             Gizmos.color = Color.white;
             Gizmos.DrawWireCube(bounds.center, bounds.size);
         }
+
+        //void OnDrawGizmos()
+        //{
+        //    if (data == null)
+        //    {
+        //        return;
+        //    }
+
+        //    for (int x = 0; x < data.GetLength(0); x++)
+        //    {
+        //        for (int y = 0; y < data.GetLength(1); y++)
+        //        {
+        //            for (int z = 0; z < data.GetLength(2); z++)
+        //            {
+        //                Gizmos.color = data[x, y, z] == 0 ? Color.blue : Color.green;
+        //                Gizmos.DrawSphere(transform.position + new Vector3(x, y, z), 0.05f);
+        //            }
+        //        }
+        //    }
+        //}
     }
 }

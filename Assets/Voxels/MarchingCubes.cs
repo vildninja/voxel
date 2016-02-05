@@ -111,6 +111,7 @@ namespace VildNinja.Voxels
         public readonly Color32[] colorMap =
         {
             new Color32(0, 0, 0, 100), // this is air
+            new Color32(0, 0, 0, 100), // this is overriding air
             new Color32(255, 255, 255, 255),
             new Color32(127, 127, 127, 255),
             new Color32(0, 0, 0, 255),
@@ -143,7 +144,7 @@ namespace VildNinja.Voxels
                     for (int z = -1; z < data.Length; z++)
                     {
                         int configuration = 0;
-                        byte target = 0;
+                        byte target = 1;
                         //for (int i = 0; i < 8; i++)
                         //{
                         //    byte val = data[x + vertexOffset[i, 0], y + vertexOffset[i, 1], z + vertexOffset[i, 2]];
@@ -159,12 +160,12 @@ namespace VildNinja.Voxels
                         for (int i = 0; i < 8; i++)
                         {
                             byte val = data[x + vertexOffset[i, 0], y + vertexOffset[i, 1], z + vertexOffset[i, 2]];
-                            if (val == target)
+                            if (val <= target)
                             {
                                 configuration |= 1 << i;
                             }
 
-                            if (val > 0)
+                            if (val > target)
                             {
                                 color = Color32.Lerp(color, colorMap[val], 1f/blend);
                                 blend++;
