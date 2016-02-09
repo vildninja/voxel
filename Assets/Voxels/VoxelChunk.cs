@@ -4,6 +4,7 @@ using System.IO;
 using System;
 using System.Collections.Generic;
 using VildNinja.Voxels.Web;
+using System.Text;
 
 namespace VildNinja.Voxels
 {
@@ -105,8 +106,11 @@ namespace VildNinja.Voxels
                         if (Vector3.Distance(position, transform.localPosition + new Vector3(x, y, z)) < radius)
                         {
                             data[x, y, z] = color;
-                            myChanges[x, y, z] = true;
-                            changeCount++;
+                            if (!myChanges[x, y, z])
+                            {
+                                myChanges[x, y, z] = true;
+                                changeCount++;
+                            }
                         }
                     }
                 }
@@ -196,12 +200,21 @@ namespace VildNinja.Voxels
                         {
                             count = reader.ReadByte();
                             current = reader.ReadByte();
-                        }
+                            if (current >= MarchingCubes.Builder.colorMap.Length)
+                            {
+                                Debug.LogError("Malformed data from server: " + current, this);
+                                current = 0;
 
-                        if (myChanges != null && myChanges[x, y, z] && data[x, y, z] == current)
-                        {
-                            myChanges[x, y, z] = false;
-                            changeCount--;
+                                StringBuilder output = new StringBuilder();
+                                output.Append("Data:\n");
+                                var ms = (MemoryStream)reader.BaseStream;
+                                while (ms.Position < ms.Length)
+                                {
+                                    output.Append(ms.ReadByte());
+                                    output.Append('\n');
+                                }
+                                Debug.Log(output.ToString());
+                            }
                         }
 
                         if (data[x, y, z] == 0 || myChanges == null || !myChanges[x, y, z])
@@ -210,7 +223,11 @@ namespace VildNinja.Voxels
                         }
                         count--;
 
-                        //data[x, y, z] = reader.ReadByte();
+                        if (myChanges != null && myChanges[x, y, z] && data[x, y, z] == current)
+                        {
+                            myChanges[x, y, z] = false;
+                            changeCount--;
+                        }
                     }
                 }
             }
@@ -224,28 +241,27 @@ namespace VildNinja.Voxels
 
         void OnDrawGizmos()
         {
-            Gizmos.color = Color.white;
+            if (myChanges == null)
+            {
+                return;
+            }
+
+            Gizmos.color = Color.Lerp(Color.white, Color.red, changeCount / 10f);
             Gizmos.DrawWireCube(bounds.center, bounds.size);
+            
+            for (int x = 0; x < data.GetLength(0); x++)
+            {
+                for (int y = 0; y < data.GetLength(1); y++)
+                {
+                    for (int z = 0; z < data.GetLength(2); z++)
+                    {
+                        if (myChanges[x, y, z])
+                        {
+                            Gizmos.DrawSphere(transform.position + new Vector3(x, y, z), 0.05f);
+                        }
+                    }
+                }
+            }
         }
-
-        //void OnDrawGizmos()
-        //{
-        //    if (data == null)
-        //    {
-        //        return;
-        //    }
-
-        //    for (int x = 0; x < data.GetLength(0); x++)
-        //    {
-        //        for (int y = 0; y < data.GetLength(1); y++)
-        //        {
-        //            for (int z = 0; z < data.GetLength(2); z++)
-        //            {
-        //                Gizmos.color = data[x, y, z] == 0 ? Color.blue : Color.green;
-        //                Gizmos.DrawSphere(transform.position + new Vector3(x, y, z), 0.05f);
-        //            }
-        //        }
-        //    }
-        //}
     }
 }

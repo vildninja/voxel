@@ -34,7 +34,7 @@ namespace VildNinja.Voxels.Web
             NetworkTransport.Init();
             
             var config = new ConnectionConfig();
-            config.PacketSize = 11000;
+            config.PacketSize = 10000;
             config.Channels.Add(new ChannelQOS(QosType.ReliableSequenced));
             channel = 0;
             config.Channels.Add(new ChannelQOS(QosType.Unreliable));
