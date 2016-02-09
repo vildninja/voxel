@@ -38,11 +38,11 @@ namespace VildNinja.Voxels.Web
         private readonly Dictionary<Vint3, List<AreaHistory>> history;
 
         private readonly HashList<Vint3> changes;
-        private int tick = 0;
+        private int tick = 1;
 
         public WebServer(int port)
         {
-            buffer = new byte[10000];
+            buffer = new byte[WebManager.PACKET_SIZE];
 
             ms = new MemoryStream(buffer);
             reader = new BinaryReader(ms);
@@ -57,7 +57,7 @@ namespace VildNinja.Voxels.Web
             NetworkTransport.Init();
 
             var config = new ConnectionConfig();
-            config.PacketSize = 10000;
+            config.PacketSize = WebManager.PACKET_SIZE;
             config.Channels.Add(new ChannelQOS(QosType.ReliableSequenced));
             channel = 0;
             config.Channels.Add(new ChannelQOS(QosType.Unreliable));

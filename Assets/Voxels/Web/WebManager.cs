@@ -5,6 +5,8 @@ namespace VildNinja.Voxels.Web
 {
     public class WebManager : MonoBehaviour
     {
+        public const ushort PACKET_SIZE = 3000;
+
         public static bool IsServer = false;
         public static bool IsConnected = false;
 

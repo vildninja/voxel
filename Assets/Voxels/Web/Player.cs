@@ -10,7 +10,7 @@ namespace VildNinja.Voxels.Web
         public readonly int connection;
         public readonly Dictionary<Vint3, int> histroy;
         public Vector3 position;
-        public Vint3 area;
+        public Vint3 area = new Vint3(int.MaxValue, int.MaxValue, int.MaxValue);
 
         public Player(int connection)
         {

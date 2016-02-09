@@ -25,7 +25,7 @@ namespace VildNinja.Voxels.Web
 
         public WebClient()
         {
-            buffer = new byte[10000];
+            buffer = new byte[WebManager.PACKET_SIZE];
 
             ms = new MemoryStream(buffer);
             reader = new BinaryReader(ms);
@@ -34,7 +34,7 @@ namespace VildNinja.Voxels.Web
             NetworkTransport.Init();
             
             var config = new ConnectionConfig();
-            config.PacketSize = 10000;
+            config.PacketSize = WebManager.PACKET_SIZE;
             config.Channels.Add(new ChannelQOS(QosType.ReliableSequenced));
             channel = 0;
             config.Channels.Add(new ChannelQOS(QosType.Unreliable));
@@ -78,10 +78,13 @@ namespace VildNinja.Voxels.Web
                     case NetworkEventType.DataEvent:
 
                         ms.Position = 0;
+                        int count = 0;
                         while (ms.Position < size)
                         {
                             ChunkManager.Instance.LoadChunk(reader);
+                            count++;
                         }
+                        Debug.Log("Received " + count + " chunks as " + size + " bytes");
 
                         break;
                     case NetworkEventType.Nothing:
@@ -123,6 +126,9 @@ namespace VildNinja.Voxels.Web
                     ms.Position = 0;
                 }
             }
+
+
+            Debug.Log("Send movement " + position + " and " + ms.Position + " bytes");
 
             if (ms.Position > 0)
             {

@@ -205,23 +205,32 @@ namespace VildNinja.Voxels
                                 Debug.LogError("Malformed data from server: " + current, this);
                                 current = 0;
 
-                                StringBuilder output = new StringBuilder();
-                                output.Append("Data:\n");
                                 var ms = (MemoryStream)reader.BaseStream;
-                                while (ms.Position < ms.Length)
-                                {
-                                    output.Append(ms.ReadByte());
-                                    output.Append('\n');
-                                }
-                                Debug.Log(output.ToString());
+
+                                //StringBuilder output = new StringBuilder();
+                                //output.Append("Data:\n");
+                                //while (ms.Position < ms.Length)
+                                //{
+                                //    output.Append(ms.ReadByte());
+                                //    output.Append('\n');
+                                //}
+                                //Debug.Log(output.ToString());
+
+                                ms.Position = ms.Length;
+                                return;
                             }
+                        }
+
+                        count--;
+                        if (current == 0)
+                        {
+                            continue;
                         }
 
                         if (data[x, y, z] == 0 || myChanges == null || !myChanges[x, y, z])
                         {
                             data[x, y, z] = current;
                         }
-                        count--;
 
                         if (myChanges != null && myChanges[x, y, z] && data[x, y, z] == current)
                         {

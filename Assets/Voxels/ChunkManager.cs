@@ -35,6 +35,8 @@ namespace VildNinja.Voxels
         private readonly HashList<Vint3> update = new HashList<Vint3>();
         private readonly Queue<Vint3> painted = new Queue<Vint3>();
 
+        private readonly HashList<Vint3> areas = new HashList<Vint3>(); 
+
         public IEnumerable<Vint3> AllChunks
         {
             get
@@ -131,7 +133,7 @@ namespace VildNinja.Voxels
                 intPos.y > int.MaxValue - 100 || intPos.y < int.MinValue + 100 ||
                 intPos.z > int.MaxValue - 100 || intPos.z < int.MinValue + 100)
             {
-                Debug.LogError("Attempted to create chung close to border: " + intPos);
+                Debug.LogError("Attempted to create chunk close to border: " + intPos);
                 return null;
             }
 
@@ -148,6 +150,8 @@ namespace VildNinja.Voxels
             go.transform.SetParent(transform, false);
 
             chunks.Add(intPos, chunk);
+
+            areas.Add(intPos/64);
 
             return chunk;
         }
@@ -272,6 +276,16 @@ namespace VildNinja.Voxels
             }
 
             return v;
+        }
+
+        void OnDrawGizmos()
+        {
+            Gizmos.color = Color.white;
+
+            foreach (var area in areas)
+            {
+                Gizmos.DrawWireCube(((area.Vector + new Vector3(0.5f, 0.5f, 0.5f)) * 64), new Vector3(64, 64, 64));
+            }
         }
     }
 }
