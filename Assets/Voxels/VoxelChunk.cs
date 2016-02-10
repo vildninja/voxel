@@ -156,12 +156,16 @@ namespace VildNinja.Voxels
                     {
                         if (current == data[x, y, z])
                         {
-                            if (count < 255)
+                            if (count < 100)
                             {
                                 count++;
                             }
                             else
                             {
+                                if (count == 0)
+                                {
+                                    Debug.LogError("Count is zero!!", this);
+                                }
                                 writer.Write(count);
                                 writer.Write(current);
                                 count = 1;
@@ -171,6 +175,10 @@ namespace VildNinja.Voxels
                         {
                             if (count > 0)
                             {
+                                if (count == 0)
+                                {
+                                    Debug.LogError("Count is zero!!", this);
+                                }
                                 writer.Write(count);
                                 writer.Write(current);
                             }
@@ -179,6 +187,11 @@ namespace VildNinja.Voxels
                         }
                     }
                 }
+            }
+
+            if (count == 0)
+            {
+                Debug.LogError("End count is zero!!", this);
             }
 
             writer.Write(count);
@@ -206,18 +219,13 @@ namespace VildNinja.Voxels
                                 current = 0;
 
                                 var ms = (MemoryStream)reader.BaseStream;
-
-                                //StringBuilder output = new StringBuilder();
-                                //output.Append("Data:\n");
-                                //while (ms.Position < ms.Length)
-                                //{
-                                //    output.Append(ms.ReadByte());
-                                //    output.Append('\n');
-                                //}
-                                //Debug.Log(output.ToString());
-
                                 ms.Position = ms.Length;
                                 return;
+                            }
+
+                            if (count == 0)
+                            {
+                                Debug.LogError("Count is zero at: " + x + "," + y + "," + z);
                             }
                         }
 

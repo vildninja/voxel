@@ -40,7 +40,7 @@ namespace VildNinja.Voxels.Web
         private readonly HashList<Vint3> changes;
         private int tick = 1;
 
-        public WebServer(int port)
+        public WebServer(int port, HostTopology topology)
         {
             buffer = new byte[WebManager.PACKET_SIZE];
 
@@ -53,16 +53,9 @@ namespace VildNinja.Voxels.Web
             players = new List<Player>();
             history = new Dictionary<Vint3, List<AreaHistory>>();
             changes = new HashList<Vint3>();
-
-            NetworkTransport.Init();
-
-            var config = new ConnectionConfig();
-            config.PacketSize = WebManager.PACKET_SIZE;
-            config.Channels.Add(new ChannelQOS(QosType.ReliableSequenced));
+            
             channel = 0;
-            config.Channels.Add(new ChannelQOS(QosType.Unreliable));
             movement = 1;
-            var topology = new HostTopology(config, 200);
             host = NetworkTransport.AddHost(topology, port);
         }
 
@@ -85,13 +78,13 @@ namespace VildNinja.Voxels.Web
 
         public void PollNetwork()
         {
-            for (int i = 0; i < 100; i++)
+            for (int i = 0; i < 5; i++)
             {
                 int hostId;
                 int connId;
                 int chanId;
                 int size;
-
+                
                 var reply = NetworkTransport.Receive(out hostId, out connId, out chanId, buffer, buffer.Length, out size,
                     out error);
                 TestError("Poll network");
@@ -270,6 +263,16 @@ namespace VildNinja.Voxels.Web
                     foreach (var change in step.changes)
                     {
                         ChunkManager.Instance.SaveChunk(change, writer);
+                        if (buffer[ms.Position - 2] == 0)
+                        {
+                            Debug.LogError("Voxel error: " + change);
+                        }
+                        Debug.Log("Voxel written: " + change + " last 6 bytes:" + buffer[ms.Position - 6] + ", " +
+                            buffer[ms.Position - 5] + ", " +
+                            buffer[ms.Position - 4] + ", " +
+                            buffer[ms.Position - 3] + ", " +
+                            buffer[ms.Position - 2] + ", " +
+                            buffer[ms.Position - 1]);
                         if (ms.Position > buffer.Length - 1040)
                         {
                             Flush(player.connection);
@@ -329,7 +332,7 @@ namespace VildNinja.Voxels.Web
                 return false;
             }
 
-            Debug.LogError("network_err #" + error + ": " + context);
+            Debug.LogError("network_err #" + error + " " + ((NetworkError)error) + ": " + context);
             return true;
         }
     }

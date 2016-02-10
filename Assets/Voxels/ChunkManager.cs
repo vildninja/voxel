@@ -4,6 +4,7 @@ using System.Collections;
 using System.Collections.Generic;
 using VildNinja.Voxels.Web;
 using VildNinja.Utils;
+using System.Text;
 #if !UNITY_WEBGL
 using System.IO;
 #endif
@@ -198,6 +199,7 @@ namespace VildNinja.Voxels
             writer.Write(chunk.iPos.x);
             writer.Write(chunk.iPos.y);
             writer.Write(chunk.iPos.z);
+            writer.Write(chunk.iPos.GetHashCode());
             chunk.SaveChunk(writer);
         }
 
@@ -250,10 +252,7 @@ namespace VildNinja.Voxels
             VoxelChunk chunk;
             if (chunks.TryGetValue(v, out chunk))
             {
-                writer.Write(v.x);
-                writer.Write(v.y);
-                writer.Write(v.z);
-                chunk.SaveChunk(writer);
+                SaveChunk(chunk, writer);
             }
 
             return painted.Count;
@@ -262,6 +261,28 @@ namespace VildNinja.Voxels
         public Vint3 LoadChunk(BinaryReader reader)
         {
             var v = new Vint3(reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32());
+            int hash = reader.ReadInt32();
+
+            if (hash != v.GetHashCode())
+            {
+                Debug.LogError("Chunk at " + v + " is malformed!");
+                var ms = (MemoryStream)reader.BaseStream;
+
+                //StringBuilder builder = new StringBuilder();
+                //builder.AppendLine("Data:");
+                //var array = WebClient.buffer;
+                //for (int i = 0; i < array.Length; i++)
+                //{
+                //    builder.AppendLine(i.ToString("0000") + " " + array[i] + (i == ms.Position ? " <---" : ""));
+                //}
+                //Debug.Log(builder.ToString());
+
+                ms.Position = ms.Length;
+                return v;
+            }
+
+            Debug.Log("Receiving chunk " + v);
+
             if (!chunks.ContainsKey(v))
             {
                 CreateChunk(v);

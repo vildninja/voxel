@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using System.Collections;
+using UnityEngine.Networking;
 
 namespace VildNinja.Voxels.Web
 {
@@ -23,11 +24,44 @@ namespace VildNinja.Voxels.Web
         // Use this for initialization
         void Awake()
         {
+
+            NetworkTransport.Init();
+
+            var config = new ConnectionConfig();
+            config.PacketSize = PACKET_SIZE;
+            config.Channels.Add(new ChannelQOS(QosType.ReliableFragmented));
+            config.Channels.Add(new ChannelQOS(QosType.Unreliable));
+
+
+            Debug.Log("AckDelay " + config.AckDelay);
+            Debug.Log("AllCostTimeout " + config.AllCostTimeout);
+            Debug.Log("ChannelCount " + config.ChannelCount);
+            Debug.Log("ConnectTimeout " + config.ConnectTimeout);
+            Debug.Log("DisconnectTimeout " + config.DisconnectTimeout);
+            Debug.Log("FragmentSize " + config.FragmentSize);
+            Debug.Log("IsAcksLong " + config.IsAcksLong);
+            Debug.Log("MaxCombinedReliableMessageCount " + config.MaxCombinedReliableMessageCount);
+            Debug.Log("MaxCombinedReliableMessageSize " + config.MaxCombinedReliableMessageSize);
+            Debug.Log("MaxConnectionAttempt " + config.MaxConnectionAttempt);
+            Debug.Log("MaxSentMessageQueueSize " + config.MaxSentMessageQueueSize);
+            Debug.Log("MinUpdateTimeout " + config.MinUpdateTimeout);
+            Debug.Log("NetworkDropThreshold " + config.NetworkDropThreshold);
+            Debug.Log("OverflowDropThreshold " + config.OverflowDropThreshold);
+            Debug.Log("PacketSize " + config.PacketSize);
+            Debug.Log("PingTimeout " + config.PingTimeout);
+            Debug.Log("ReducedPingTimeout " + config.ReducedPingTimeout);
+            Debug.Log("ResendTimeout " + config.ResendTimeout);
+            Debug.Log("UsePlatformSpecificProtocols " + config.UsePlatformSpecificProtocols);
+
+            var topology = new HostTopology(config, 200);
+            topology.ReceivedMessagePoolSize = 50000;
+            topology.SentMessagePoolSize = 50000;
+
             if (SystemInfo.graphicsDeviceID == 0 || forceServer)
             {
                 IsServer = true;
 
-                server = new WebServer(19219);
+                server = new WebServer(19219, topology);
 
                 ChunkManager.Instance.LoadChunks("server.vox");
                 server.RefreshMap();
@@ -35,7 +69,7 @@ namespace VildNinja.Voxels.Web
             }
             else
             {
-                client = new WebClient();
+                client = new WebClient(topology);
                 client.TryConnect("127.0.0.1", 19219);
             }
         }

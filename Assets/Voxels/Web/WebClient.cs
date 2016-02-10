@@ -23,7 +23,7 @@ namespace VildNinja.Voxels.Web
 
         private bool isConnected = false;
 
-        public WebClient()
+        public WebClient(HostTopology topology)
         {
             buffer = new byte[WebManager.PACKET_SIZE];
 
@@ -31,15 +31,8 @@ namespace VildNinja.Voxels.Web
             reader = new BinaryReader(ms);
             writer = new BinaryWriter(ms);
             
-            NetworkTransport.Init();
-            
-            var config = new ConnectionConfig();
-            config.PacketSize = WebManager.PACKET_SIZE;
-            config.Channels.Add(new ChannelQOS(QosType.ReliableSequenced));
             channel = 0;
-            config.Channels.Add(new ChannelQOS(QosType.Unreliable));
             movement = 1;
-            var topology = new HostTopology(config, 1);
             host = NetworkTransport.AddHost(topology);
         }
 
@@ -51,7 +44,7 @@ namespace VildNinja.Voxels.Web
 
         public void PollNetwork()
         {
-            for (int i = 0; i < 10; i++)
+            for (int i = 0; i < 1; i++)
             {
                 int hostId;
                 int connId;
@@ -117,8 +110,8 @@ namespace VildNinja.Voxels.Web
                     break;
                 }
 
-                // max chunk size is 8*8*8*2 + 3*4 = 1036 bytes
-                // but is more likely to be between 50 and 100 bytes
+                // max chunk size is 8*8*8*2 + 4*4 = 1040 bytes
+                // but is more likely to be around 100 bytes
                 if (ms.Position > buffer.Length - 1040)
                 {
                     NetworkTransport.Send(host, connection, channel, buffer, (int)ms.Position, out error);
@@ -128,7 +121,7 @@ namespace VildNinja.Voxels.Web
             }
 
 
-            Debug.Log("Send movement " + position + " and " + ms.Position + " bytes");
+            //Debug.Log("Send movement " + position + " and " + ms.Position + " bytes");
 
             if (ms.Position > 0)
             {
@@ -144,7 +137,7 @@ namespace VildNinja.Voxels.Web
                 return false;
             }
 
-            Debug.LogError("network_err #" + error + ": " + context);
+            Debug.LogError("network_err #" + error + " " + ((NetworkError)error) + ": " + context);
             return true;
         }
     }
