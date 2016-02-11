@@ -3,6 +3,7 @@ using System.Collections;
 using VildNinja.Voxels;
 using System.Text;
 using System.Collections.Generic;
+using VildNinja.Utils;
 using VildNinja.Voxels.Web;
 
 public class PlayerPainter : MonoBehaviour {
@@ -82,6 +83,7 @@ public class PlayerPainter : MonoBehaviour {
                 if (c == 'y') pos.y = textValue;
                 if (c == 'z') pos.z = textValue;
                 transform.position = pos;
+                textValue = 0;
             }
         }
 
@@ -135,8 +137,9 @@ public class PlayerPainter : MonoBehaviour {
 
         body.AddForce(move, ForceMode.Acceleration);
 
-        if (web != null)
+        if (web != null && web.position != transform.position)
         {
+            ScreenLog.SetSticky("Position", transform.position.ToString("F1"));
             web.position = transform.position;
         }
     }

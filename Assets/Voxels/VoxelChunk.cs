@@ -218,8 +218,8 @@ namespace VildNinja.Voxels
                                 Debug.LogError("Malformed data from server: " + current, this);
                                 current = 0;
 
-                                var ms = (MemoryStream)reader.BaseStream;
-                                ms.Position = ms.Length;
+                                //var ms = (MemoryStream)reader.BaseStream;
+                                //ms.Position = ms.Length;
                                 return;
                             }
 

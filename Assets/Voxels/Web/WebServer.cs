@@ -32,15 +32,17 @@ namespace VildNinja.Voxels.Web
 
         private byte error;
         private readonly int host;
+        private readonly int webHost;
         private readonly int channel;
         private readonly int movement;
         private readonly List<Player> players;
+        private readonly Dictionary<int, Player> connections;
         private readonly Dictionary<Vint3, List<AreaHistory>> history;
 
         private readonly HashList<Vint3> changes;
         private int tick = 1;
 
-        public WebServer(int port, HostTopology topology)
+        public WebServer(int port, int webPort, HostTopology topology)
         {
             buffer = new byte[WebManager.PACKET_SIZE];
 
@@ -51,12 +53,16 @@ namespace VildNinja.Voxels.Web
             big = new MemoryStream();
 
             players = new List<Player>();
+            connections = new Dictionary<int, Player>();
             history = new Dictionary<Vint3, List<AreaHistory>>();
             changes = new HashList<Vint3>();
             
             channel = 0;
             movement = 1;
             host = NetworkTransport.AddHost(topology, port);
+#if !UNITY_WEBGL
+            webHost = NetworkTransport.AddWebsocketHost(topology, webPort);
+#endif
         }
 
         public void RefreshMap()
@@ -92,23 +98,26 @@ namespace VildNinja.Voxels.Web
                 switch (reply)
                 {
                     case NetworkEventType.ConnectEvent:
-                        var player = new Player(connId);
-                        players.Add(player);
-                        Debug.Log("New player connected: " + connId);
-
-                        break;
-                    case NetworkEventType.DisconnectEvent:
-                        for (int j = 0; j < players.Count; j++)
+                        if (!connections.ContainsKey(connId))
                         {
-                            if (players[j].connection == connId)
-                            {
-                                players.RemoveAt(j);
-                                break;
-                            }
+                            var player = new Player(connId, hostId);
+                            players.Add(player);
+                            connections.Add(connId, player);
+                            Debug.Log("New player connected: " + connId);
                         }
-                        Debug.Log("New player disconnected: " + connId);
 
                         break;
+
+                    case NetworkEventType.DisconnectEvent:
+                        if (!connections.ContainsKey(connId))
+                        {
+                            players.Remove(connections[connId]);
+                            connections.Remove(connId);
+                            Debug.Log("New player disconnected: " + connId);
+                        }
+
+                        break;
+
                     case NetworkEventType.DataEvent:
 
                         if (chanId == channel)
@@ -118,10 +127,11 @@ namespace VildNinja.Voxels.Web
                         }
                         else if (chanId == movement)
                         {
-                            PlayerMovedTo(connId);
+                            PlayerMovedTo(connections[connId]);
                         }
 
                         break;
+
                     case NetworkEventType.Nothing:
                         i = 10000;
                         break;
@@ -139,19 +149,8 @@ namespace VildNinja.Voxels.Web
             }
         }
 
-        private void PlayerMovedTo(int connection)
+        private void PlayerMovedTo(Player player)
         {
-            Player player = null;
-            for (int i = 0; i < players.Count; i++)
-            {
-                if (players[i].connection == connection)
-                {
-                    player = players[i];
-                    break;
-                }
-            }
-
-
             ms.Position = 0;
 
             var pos = new Vector3(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle());

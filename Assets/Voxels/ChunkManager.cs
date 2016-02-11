@@ -5,9 +5,7 @@ using System.Collections.Generic;
 using VildNinja.Voxels.Web;
 using VildNinja.Utils;
 using System.Text;
-#if !UNITY_WEBGL
 using System.IO;
-#endif
 
 namespace VildNinja.Voxels
 {
@@ -48,6 +46,7 @@ namespace VildNinja.Voxels
 
         private void Update()
         {
+            ScreenLog.SetSticky("Update", update.Count.ToString());
             if (update.Count == 0)
             {
                 return;
@@ -152,7 +151,7 @@ namespace VildNinja.Voxels
 
             chunks.Add(intPos, chunk);
 
-            areas.Add(intPos/64);
+            areas.Add(intPos*Size/64);
 
             return chunk;
         }

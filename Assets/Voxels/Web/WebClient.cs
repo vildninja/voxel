@@ -4,6 +4,7 @@ using UnityEngine.Networking;
 using System.Collections.Generic;
 using System.IO;
 using System;
+using VildNinja.Utils;
 
 namespace VildNinja.Voxels.Web
 {
@@ -33,7 +34,7 @@ namespace VildNinja.Voxels.Web
             
             channel = 0;
             movement = 1;
-            host = NetworkTransport.AddHost(topology);
+            host = NetworkTransport.AddHost(topology, 0);
         }
 
         public void TryConnect(string address, int port)
@@ -62,12 +63,15 @@ namespace VildNinja.Voxels.Web
 
                         isConnected = true;
                         WebManager.IsConnected = true;
+                        ScreenLog.SetSticky("Connected", "TRUE");
                         break;
+
                     case NetworkEventType.DisconnectEvent:
                         isConnected = false;
                         WebManager.IsConnected = false;
-
+                        ScreenLog.SetSticky("Connected", "FALSE");
                         break;
+
                     case NetworkEventType.DataEvent:
 
                         ms.Position = 0;
@@ -78,10 +82,12 @@ namespace VildNinja.Voxels.Web
                             count++;
                         }
                         Debug.Log("Received " + count + " chunks as " + size + " bytes");
+                        ScreenLog.Write("Received " + count + " chunks as " + size + " bytes");
 
                         break;
+
                     case NetworkEventType.Nothing:
-                        i = 10;
+                        i = 10000;
                         break;
                 }
             }
@@ -138,6 +144,7 @@ namespace VildNinja.Voxels.Web
             }
 
             Debug.LogError("network_err #" + error + " " + ((NetworkError)error) + ": " + context);
+            ScreenLog.Write("network_err #" + error + " " + ((NetworkError)error) + ": " + context);
             return true;
         }
     }
