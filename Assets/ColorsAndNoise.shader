@@ -51,15 +51,29 @@
 				UNITY_TRANSFER_FOG(o,o.vertex);
 				return o;
 			}
-			
+
+			float noise(float pos, float freq, float seed)
+			{
+				float rest = fmod(pos, freq);
+				float a = frac((pos - rest) * seed * 9991.99);
+				float b = frac((pos - rest + freq) * seed * 9991.99);
+				return lerp(0, 1, rest / freq);
+			}
+
 			fixed4 frag (v2f i) : SV_Target
 			{
 				// sample the texture
-				fixed4 col = i.color * (tex2D(_MainTex, i.pos.xy) * tex2D(_MainTex, i.pos.zx) * tex2D(_MainTex, i.pos.yz));
+				fixed4 col = i.color * noise(i.pos.x, 0.17951329, 1291.7);
+				/*(
+					noise(i.pos.x, 0.3, 8891.7) +
+					noise(i.pos.y, 0.3, 19.3) +
+					noise(i.pos.z, 0.3, -581.1)
+				) / 3;*/
 				// apply fog
 				UNITY_APPLY_FOG(i.fogCoord, col);
 				return col;
 			}
+
 			ENDCG
 		}
 	}
