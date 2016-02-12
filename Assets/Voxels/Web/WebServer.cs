@@ -27,9 +27,7 @@ namespace VildNinja.Voxels.Web
         private readonly MemoryStream ms;
         private readonly BinaryReader reader;
         private readonly BinaryWriter writer;
-
-        private MemoryStream big;
-
+        
         private byte error;
         private readonly int host;
         private readonly int webHost;
@@ -50,8 +48,6 @@ namespace VildNinja.Voxels.Web
             reader = new BinaryReader(ms);
             writer = new BinaryWriter(ms);
 
-            big = new MemoryStream();
-
             players = new List<Player>();
             connections = new Dictionary<int, Player>();
             history = new Dictionary<Vint3, List<AreaHistory>>();
@@ -60,16 +56,14 @@ namespace VildNinja.Voxels.Web
             channel = 0;
             movement = 1;
             host = NetworkTransport.AddHost(topology, port);
-#if !UNITY_WEBGL
-            webHost = NetworkTransport.AddWebsocketHost(topology, webPort);
-#endif
+            webHost = NetworkTransport.AddWebsocketHost(topology, webPort, null);
         }
 
         public void RefreshMap()
         {
             foreach (var v in ChunkManager.Instance.AllChunks)
             {
-                var area = v / 64;
+                var area = v / 8;
 
                 List<AreaHistory> steps;
                 if (!history.TryGetValue(area, out steps))
@@ -84,7 +78,7 @@ namespace VildNinja.Voxels.Web
 
         public void PollNetwork()
         {
-            for (int i = 0; i < 5; i++)
+            for (int i = 0; i < 10; i++)
             {
                 int hostId;
                 int connId;
@@ -93,41 +87,48 @@ namespace VildNinja.Voxels.Web
                 
                 var reply = NetworkTransport.Receive(out hostId, out connId, out chanId, buffer, buffer.Length, out size,
                     out error);
-                TestError("Poll network");
+
+                int id = connId + hostId*10000;
+                TestError("Poll network #" + id);
 
                 switch (reply)
                 {
                     case NetworkEventType.ConnectEvent:
-                        if (!connections.ContainsKey(connId))
+                        if (!connections.ContainsKey(id))
                         {
                             var player = new Player(connId, hostId);
                             players.Add(player);
-                            connections.Add(connId, player);
-                            Debug.Log("New player connected: " + connId);
+                            connections.Add(id, player);
+                            Debug.Log("New player connected: " + player);
                         }
 
                         break;
 
                     case NetworkEventType.DisconnectEvent:
-                        if (!connections.ContainsKey(connId))
+                        if (connections.ContainsKey(id))
                         {
-                            players.Remove(connections[connId]);
-                            connections.Remove(connId);
-                            Debug.Log("New player disconnected: " + connId);
+                            players.Remove(connections[id]);
+                            Debug.Log("New player disconnected: " + connections[id]);
+                            connections.Remove(id);
                         }
 
                         break;
 
                     case NetworkEventType.DataEvent:
+                        ms.Position = 0;
 
                         if (chanId == channel)
                         {
-                            Debug.Log("Data received from: " + connId + " - " + size + " bytes");
+                            Debug.Log("Data received from: " + connections[id] + " - " + size + " bytes");
                             ReceiveChanges(size);
                         }
                         else if (chanId == movement)
                         {
-                            PlayerMovedTo(connections[connId]);
+                            var command = reader.ReadByte();
+                            if (command == WebManager.POSITION)
+                            {
+                                PlayerMovedTo(connections[id]);
+                            }
                         }
 
                         break;
@@ -141,7 +142,6 @@ namespace VildNinja.Voxels.Web
 
         private void ReceiveChanges(int length)
         {
-            ms.Position = 0;
             while (ms.Position < length)
             {
                 var v = ChunkManager.Instance.LoadChunk(reader);
@@ -151,8 +151,6 @@ namespace VildNinja.Voxels.Web
 
         private void PlayerMovedTo(Player player)
         {
-            ms.Position = 0;
-
             var pos = new Vector3(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle());
             player.position = pos;
 
@@ -160,6 +158,8 @@ namespace VildNinja.Voxels.Web
 
             if (player.area != area)
             {
+                Debug.Log("Player " + player + " moved to " + area);
+                player.area = area;
                 for (int i = 0; i < Vint3.Offset.Length; i++)
                 {
                     var a = area + Vint3.Offset[i];
@@ -181,7 +181,7 @@ namespace VildNinja.Voxels.Web
             foreach (var change in changes)
             {
                 // find each change's area
-                var area = change / 64;
+                var area = change / 8;
                 List<AreaHistory> steps;
 
                 if (!history.TryGetValue(area, out steps))
@@ -262,19 +262,19 @@ namespace VildNinja.Voxels.Web
                     foreach (var change in step.changes)
                     {
                         ChunkManager.Instance.SaveChunk(change, writer);
-                        if (buffer[ms.Position - 2] == 0)
-                        {
-                            Debug.LogError("Voxel error: " + change);
-                        }
-                        Debug.Log("Voxel written: " + change + " last 6 bytes:" + buffer[ms.Position - 6] + ", " +
-                            buffer[ms.Position - 5] + ", " +
-                            buffer[ms.Position - 4] + ", " +
-                            buffer[ms.Position - 3] + ", " +
-                            buffer[ms.Position - 2] + ", " +
-                            buffer[ms.Position - 1]);
+                        //if (buffer[ms.Position - 2] == 0)
+                        //{
+                        //    Debug.LogError("Voxel error: " + change);
+                        //}
+                        //Debug.Log("Voxel written: " + change + " last 6 bytes:" + buffer[ms.Position - 6] + ", " +
+                        //    buffer[ms.Position - 5] + ", " +
+                        //    buffer[ms.Position - 4] + ", " +
+                        //    buffer[ms.Position - 3] + ", " +
+                        //    buffer[ms.Position - 2] + ", " +
+                        //    buffer[ms.Position - 1]);
                         if (ms.Position > buffer.Length - 1040)
                         {
-                            Flush(player.connection);
+                            Flush(player);
                         }
                     }
                 }
@@ -282,15 +282,16 @@ namespace VildNinja.Voxels.Web
 
             player.histroy[area] = steps[steps.Count - 1].time;
 
-            Flush(player.connection);
+            Flush(player);
         }
 
-        public void Flush(int connection)
+        public void Flush(Player player)
         {
             if (ms.Position > 0)
             {
-                NetworkTransport.Send(host, connection, channel, buffer, (int)ms.Position, out error);
-                TestError("Flush to " + connection);
+                Debug.Log("Sending " + ms.Position + " bytes to player " + player);
+                NetworkTransport.Send(player.host, player.connection, channel, buffer, (int)ms.Position, out error);
+                TestError("Flush to " + player);
                 ms.Position = 0;
             }
         }

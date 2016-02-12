@@ -24,6 +24,8 @@ namespace VildNinja.Voxels.Web
 
         private bool isConnected = false;
 
+        private int recieveCount = 0;
+
         public WebClient(HostTopology topology)
         {
             buffer = new byte[WebManager.PACKET_SIZE];
@@ -45,7 +47,7 @@ namespace VildNinja.Voxels.Web
 
         public void PollNetwork()
         {
-            for (int i = 0; i < 1; i++)
+            for (int i = 0; i < 20; i++)
             {
                 int hostId;
                 int connId;
@@ -55,6 +57,8 @@ namespace VildNinja.Voxels.Web
                 var reply = NetworkTransport.Receive(out hostId, out connId, out chanId, buffer, buffer.Length, out size,
                     out error);
                 TestError("Poll network");
+
+                //Debug.Log("Net: " + reply + " error? " + (NetworkError)error);
 
                 switch (reply)
                 {
@@ -73,6 +77,16 @@ namespace VildNinja.Voxels.Web
                         break;
 
                     case NetworkEventType.DataEvent:
+
+                        recieveCount++;
+
+                        if (recieveCount >= 3)
+                        {
+                            buffer[0] = WebManager.ALIVE;
+                            NetworkTransport.Send(hostId, connId, movement, buffer, 1, out error);
+                            TestError("Send ALIVE");
+                            recieveCount = 0;
+                        }
 
                         ms.Position = 0;
                         int count = 0;
@@ -101,6 +115,7 @@ namespace VildNinja.Voxels.Web
             }
             
             ms.Position = 0;
+            writer.Write(WebManager.POSITION);
             writer.Write(position.x);
             writer.Write(position.y);
             writer.Write(position.z);

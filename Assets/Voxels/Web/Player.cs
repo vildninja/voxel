@@ -30,5 +30,10 @@ namespace VildNinja.Voxels.Web
         {
             return connection * 1483;
         }
+
+        public override string ToString()
+        {
+            return "#" + connection + "@" + host + area;
+        }
     }
 }
