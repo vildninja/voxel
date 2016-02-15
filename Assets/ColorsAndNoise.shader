@@ -6,7 +6,7 @@
 	}
 	SubShader
 	{
-		Tags { "RenderType"="Opaque" }
+		Tags { "RenderType"="Opaque" "LightMode"="ForwardBase" }
 		LOD 100
 
 		Pass
@@ -18,11 +18,13 @@
 			#pragma multi_compile_fog
 			
 			#include "UnityCG.cginc"
+			#include "UnityLightingCommon.cginc" // for _LightColor0
 
 			struct appdata
 			{
 				float4 vertex : POSITION;
 				float4 color : COLOR;
+				float3 normal : NORMAL;
 			};
 
 			struct v2f
@@ -55,7 +57,8 @@
 				o.uv.y = (noise(o.pos.x, 0.147951329, 1291.7) +
 					noise(o.pos.y, 2.047951329, 1291.7) + noise(o.pos.z, 0.347951329, 1291.7)) / 3;
 
-				o.color = v.color;
+				float3 normal = UnityObjectToWorldNormal(v.normal);
+				o.color = v.color * (max(0.3, dot(normal, _WorldSpaceLightPos0.xyz)) * _LightColor0);
 				UNITY_TRANSFER_FOG(o,o.vertex);
 				return o;
 			}
@@ -65,10 +68,10 @@
 			{
 				// sample the texture
 				//fixed4(i.pos * 0.1, 1);// 
-				fixed4 col = i.color * lerp((tex2D(_MainTex, i.uv) +
+				fixed4 col = i.color * lerp((tex2D(_MainTex, i.uv) * 2 +
 					noise(i.pos.x + i.pos.y * 0.2 + i.pos.z * 0.3, 0.047951329, 1291.7) +
 					noise(i.pos.x * 0.3 + i.pos.y + i.pos.z * 0.2, 0.047951329, 1291.7) +
-					noise(i.pos.x * 0.2 + i.pos.y * 0.3 + i.pos.z, 0.047951329, 1291.7)) / 4, fixed4(0.5, 0.5, 0.5, 1), i.pos.w / 60);// +fixed4(i.pos / 10, 0);
+					noise(i.pos.x * 0.2 + i.pos.y * 0.3 + i.pos.z, 0.047951329, 1291.7)) / 5, fixed4(0.7, 0.7, 0.7, 1), i.pos.w / 60);// +fixed4(i.pos / 10, 0);
 				/*(
 					noise(i.pos.x, 0.3, 8891.7) +
 					noise(i.pos.y, 0.3, 19.3) +
